@@ -13,8 +13,8 @@
 	<link rel="stylesheet" href="{{ url_for('static', filename='vendor/chartist/css/chartist-custom.css') }}">
     <!-- MAIN CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-    <!-- FOR DEMO PURPOSES ONLY. You should remove this in your project -->
-	<link rel="stylesheet" href="{{ url_for('static', filename='css/demo.css') }}">
+{#    <!-- FOR DEMO PURPOSES ONLY. You should remove this in your project -->#}
+{#	<link rel="stylesheet" href="{{ url_for('static', filename='css/demo.css') }}">#}
 	<!-- GOOGLE FONTS -->
 	<link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700" rel="stylesheet">
 	<!-- ICONS -->
@@ -27,7 +27,7 @@
 		<!-- NAVBAR -->
 		<nav class="navbar navbar-default navbar-fixed-top">
 			<div class="brand">
-				<a href="{{ url_for('index') }}><img src={{ url_for('static', filename='img/logo-dark.png') }}" alt="Klorofil Logo" class="img-responsive logo"></a>
+				<a href="{{ url_for('index') }}"><img src="{{ url_for('static', filename='img/logo-dark.png') }}" alt="Klorofil Logo" class="img-responsive logo"></a>
 			</div>
 			<div class="container-fluid">
 				<div class="navbar-btn">
@@ -92,7 +92,7 @@
 					<ul class="nav">
 						<li><a class="" href="{{ url_for('index') }}" ><i class="lnr lnr-home"></i> <span>集群状态</span></a></li>
 						<li>
-							<a href="#subImport" data-toggle="collapse" class="collapsed"><i class="lnr lnr-file-empty"></i> <span>导入镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
+							<a href="#subImport" data-toggle="collapse" class="collapsed"><i class="lnr lnr-enter"></i> <span>导入镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							<div id="subImport" class="collapse ">
 								<ul class="nav">
 									<li><a href="{{ url_for('import_img', type='port') }}" class="">主节点导入</a></li>
@@ -101,7 +101,7 @@
 							</div>
 						</li>
                         <li>
-							<a href="#subExport" data-toggle="collapse" class="collapsed"><i class="lnr lnr-file-empty"></i> <span>导出镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
+							<a href="#subExport" data-toggle="collapse" class="collapsed"><i class="lnr lnr-exit"></i> <span>导出镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							<div id="subExport" class="collapse ">
 								<ul class="nav">
 									<li><a href="#" class="">导出至文件夹</a></li>
@@ -110,7 +110,7 @@
 							</div>
 						</li>
                         <li>
-							<a href="#subLoad" data-toggle="collapse" class="collapsed"><i class="lnr lnr-file-empty"></i> <span>加载镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
+							<a href="#subLoad" data-toggle="collapse" class="collapsed"><i class="lnr lnr-link"></i> <span>加载镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							<div id="subLoad" class="collapse ">
 								<ul class="nav">
 									<li><a href="#" class="">加载文件夹镜像</a></li>
@@ -119,7 +119,7 @@
 							</div>
 						</li>
 						<li>
-							<a href="#subDrop" data-toggle="collapse" class="collapsed"><i class="lnr lnr-file-empty"></i> <span>删除镜像文件</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
+							<a href="#subDrop" data-toggle="collapse" class="collapsed"><i class="lnr lnr-trash"></i> <span>删除镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							<div id="subDrop" class="collapse ">
 								<ul class="nav">
                                     <li><a href="#" class="">删除集群镜像</a></li>
@@ -128,7 +128,7 @@
 							</div>
 						</li>
 						<li>
-							<a href="#subCat" data-toggle="collapse" class="collapsed"><i class="lnr lnr-file-empty"></i> <span>查看镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
+							<a href="#subCat" data-toggle="collapse" class="collapsed"><i class="lnr lnr-menu"></i> <span>查看镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							<div id="subCat" class="collapse ">
 								<ul class="nav">
 									<li><a href="#" class="">查看集群镜像</a></li>
@@ -138,7 +138,7 @@
 						</li>
                         {% if user_id == 1 %}
                             <li>
-							    <a href="#subSet" data-toggle="collapse" class="collapsed"><i class="lnr lnr-file-empty"></i> <span>集群管理</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
+							    <a href="#subSet" data-toggle="collapse" class="collapsed"><i class="lnr lnr-cog"></i> <span>集群管理</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							    <div id="subSet" class="collapse ">
 								    <ul class="nav">
 								    	<li><a href="#" class="">集群参数设置</a></li>
