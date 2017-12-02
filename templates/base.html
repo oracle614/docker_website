@@ -95,8 +95,8 @@
 							<a href="#subImport" data-toggle="collapse" class="collapsed"><i class="lnr lnr-enter"></i> <span>导入镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							<div id="subImport" class="collapse ">
 								<ul class="nav">
-									<li><a href="{{ url_for('import_img', type='port') }}" class="">主节点导入</a></li>
-									<li><a href="{{ url_for('import_img', type='local') }}" class="">本地导入</a></li>
+									<li><a href="" class="">主节点导入</a></li>
+									<li><a href="" class="">本地导入</a></li>
 								</ul>
 							</div>
 						</li>
@@ -136,7 +136,7 @@
 								</ul>
 							</div>
 						</li>
-                        {% if user_id == 1 %}
+                        {% if role == "warden" %}
                             <li>
 							    <a href="#subSet" data-toggle="collapse" class="collapsed"><i class="lnr lnr-cog"></i> <span>集群管理</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							    <div id="subSet" class="collapse ">

@@ -1,48 +1,42 @@
-from flask import Flask, render_template, url_for, redirect, request, session, flash, send_file
+from flask import Flask, render_template, url_for, redirect, request, session, flash,send_file
 from flask_sqlalchemy import SQLAlchemy
-import app.connect as connect
 import config
 import datetime
-
+from app.tool import ConnectNode
+connect = None
 
 app = Flask(__name__)
 app.config.from_object(config)
-app.secret_key = '\xdaW\x9b4\x8a\x00i\xfb\xaa\x8aW\xa2\xed\x81N\x02\xb9\x00\xbb\xee\xd2\x1c\x12\xc9'
 db = SQLAlchemy(app)
 
 
 # user info table
 class User(db.Model):
     __tablename__ = 'user'
-    username = db.Column(db.String(10), nullable=False)
+    username = db.Column(db.String(10), nullable=False, primary_key=True)
     password = db.Column(db.String(16), nullable=False)
-    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, autoincrement=True)
     email = db.Column(db.String(50), nullable=False)
     avatar = db.Column(db.String(300))
     createtime = db.Column(db.DateTime, nullable=False)
+    role = db.Column(db.String(10), nullable=False)
     info = db.Column(db.Text)
 
 
-# system set table
+# node set table
 class Sys(db.Model):
-    __tablename__ = 'system_set'
+    __tablename__ = 'sys_set'
+    image_dir = db.Column(db.String(50), nullable=False, primary_key=True)
+
+
+# node set table
+class Node(db.Model):
+    __tablename__ = 'node_set'
     ip = db.Column(db.String(15), nullable=False, primary_key=True)
-    port = db.Column(db.String(5), nullable=False)
+    port = db.Column(db.Integer)
     username = db.Column(db.String(20), nullable=False)
     password = db.Column(db.String(20), nullable=False)
-
-
-db.create_all()
-
-
-@app.route('/import/')
-def import_img():
-    request_type = request.args.get('type')
-    if request_type is 'local':
-        pass
-    else:
-        pass
-    return render_template('import-port.html')
+    image_dir = db.Column(db.String(50), db.ForeignKey('sys_set.image_dir'), nullable=False)
 
 
 # login function
@@ -76,16 +70,6 @@ def logout():
     if 'username' in session:
         session.pop('username', None)
     return redirect(url_for('login'))
-
-
-@app.route('/search/')
-def search():
-    pass
-
-
-@app.route('/settings/', methods=['GET', 'POST'])
-def settings():
-    pass
 
 
 @app.route('/lockscreen/', methods=['GET', 'POST'])
@@ -124,13 +108,38 @@ def index():
     context = {
         'username': user.username,
         'avatar': user.avatar,
-        'user_id': user.user_id,
-        'flush_time': flush_time
+        'role': user.role,
+        'cluster_info': connect.cluster_info
     }
     if context.get('avatar') is None:
         context.pop('avatar')
     return render_template('index.html', **context)
 
 
+def _get_node_info():
+    '''
+
+    :return:[(ip, port, username, password, dir),....]
+    '''
+    nodes = Node.query.filter().all()
+    nodes_info = []
+    for node in nodes:
+        ip = str(node.ip)
+        port = int(node.port)
+        username = str(node.username)
+        password = str(node.password)
+        image_dir = str(node.image_dir)
+        nodes_info.append((ip, port, username, password, image_dir))
+    return nodes_info
+
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    nodes_info = _get_node_info()
+    connect = ConnectNode(nodes_info)
+    connect.create_demo()
+    db.create_all()
+    try:
+        app.run(debug=True)
+    finally:
+        connect.close_demo()
+        connect.close()

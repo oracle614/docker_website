@@ -8,7 +8,7 @@
             <div class="panel panel-headline">
                 <div class="panel-heading">
                     <h3 class="panel-title">更新时间:</h3>
-                    <p class="panel-subtitle"><i class="fa fa-clock-o"></i> {{ flush_time }}</p>
+                    <p class="panel-subtitle"><i class="fa fa-clock-o"></i>{{ cluster_info.cluster_flush_time }}</p>
                 </div>
                 <div class="panel-body">
                     <div class="row">
@@ -17,7 +17,7 @@
                                 <!-- 集群节点个数 -->
                                 <span class="icon"><i class="fa fa-cubes"></i></span>
                                 <p>
-                                    <span class="number">5</span>
+                                    <span class="number">{{ cluster_info.cluster_node_num }}</span>
                                     <span class="title">集群节点个数</span>
                                 </p>
                             </div>
@@ -27,7 +27,7 @@
                                 <!-- 集群容器个数 -->
                                 <span class="icon"><i class="fa fa-coffee"></i></span>
                                 <p>
-                                    <span class="number">20</span>
+                                    <span class="number">{{ cluster_info.cluster_container_num }}</span>
                                     <span class="title">集群容器总数</span>
                                 </p>
                             </div>
@@ -37,7 +37,7 @@
                                 <!-- 其群镜像文件总数 -->
                                 <span class="icon"><i class="fa fa-folder"></i></span>
                                 <p>
-                                    <span class="number">35</span>
+                                    <span class="number">{{ cluster_info.cluster_tar_num }}</span>
                                     <span class="title">镜像文件总数</span>
                                 </p>
                             </div>
@@ -46,7 +46,7 @@
                             <div class="metric">
                                 <span class="icon"><i class="fa fa-tags"></i></span>
                                 <p>
-                                    <span class="number">60</span>
+                                    <span class="number">{{ cluster_info.cluster_docker_num }}</span>
                                     <span class="title">集群镜像总数</span>
                                 </p>
                             </div>
@@ -84,120 +84,22 @@
                                     </tr>
                                 </thead>
                                 <tbody>
+                                {% for node in cluster_info.cluster_nodes_info %}
                                     <tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-success">&nbsp;&nbsp;&nbsp;&nbsp;sucess&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
+                                        <td>{{ node.index }}</td>
+                                        <td>{{ node.IP }}</td>
+                                        <td>{{ node.node_container_num }}</td>
+                                        <td>{{ node.node_alive_container_num }}</td>
+                                        <td>{{ node.node_docker_num }}</td>
+                                        <td>{{ node.node_tar_num }}</td>
+                                        {% if node.node_status == 'success' %}
+                                            <td><span class="label label-success">&nbsp;&nbsp;&nbsp;&nbsp;{{ node.node_status }}&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
+                                        {% else %}
+                                            <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;{{ node.node_status }}&nbsp;&nbsp;</span></td>
+                                        {% endif %}
+
                                     </tr>
-                                    <tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr><tr>
-                                        <td>1.</td>
-                                        <td>10.42.0.76</td>
-                                        <td>15</td>
-                                        <td>7</td>
-                                        <td>15</td>
-                                        <td>18</td>
-                                        <td><span class="label label-danger">&nbsp;&nbsp;&nbsp;&nbsp;danger&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
-                                    </tr>
+                                {% endfor %}
                                 </tbody>
                             </table>
                         </div>

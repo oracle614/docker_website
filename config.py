@@ -1,4 +1,5 @@
 #!coding:utf-8
+import os
 
 # dialect+driver://username:password@host:port/database
 DIALECT = 'mysql'
@@ -15,4 +16,4 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # CSRF SET
 CSRF_ENABLED = True
-SECRET_KEY = 'FsdjalkfjlFfSDKFLFS'
+SECRET_KEY = os.urandom(24)
