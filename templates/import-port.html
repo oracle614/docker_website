@@ -1,39 +1,76 @@
 {% extends "base.html" %}
-{% block title %}Main Page | Klorofil - Docker Manager System{% endblock %}
+{% block title %}Import Page | Klorofil - Docker Manager System{% endblock %}
 {% block main %}
     <!-- MAIN CONTENT -->
     <div class="main-content">
         <div class="container-fluid">
-            <h3 class="page-title">Panels</h3>
-            <div class="row">
-                <div class="col-md-4">
-                    <!-- PANEL HEADLINE -->
-                    <div class="panel panel-headline">
-                        <div class="panel-heading">
-                            <h3 class="panel-title">Panel Headline</h3>
-                            <p class="panel-subtitle">Panel to display most important information</p>
-                        </div>
-                        <div class="panel-body">
-                            <h4>Panel Content</h4>
-                            <p>Objectively network visionary methodologies via best-of-breed users. Phosfluorescently initiate go forward leadership skills before an expanded array of infomediaries. Monotonectally incubate web-enabled communities rather than process-centric.</p>
+{#            <div class="row">#}
+            <div class="col-md-12">
+                <div class="panel panel-scrolling">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">主节点镜像文件</h3>
+                        <div class="right">
+                            <button type="button" class="btn-toggle-collapse"><i class="lnr lnr-chevron-up"></i></button>
+                            <button type="button" class="btn-remove"><i class="lnr lnr-cross"></i></button>
                         </div>
                     </div>
-                    <!-- END PANEL HEADLINE -->
+                    <div class="panel-body no-padding">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>文件编号</th>
+                                <th>镜像文件名</th>
+                                <th>创建时间</th>
+                                <th>备注</th>
+                                <th>导入</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>fafafa</td>
+                                    <td>adsdads</td>
+                                    <td>dsadas</td>
+                                    <td>dsadas</td>
+                                    <td>True</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <!-- PANEL HEADLINE -->
-                    <div class="panel panel-headline">
-                        <div class="panel-heading">
-                            <h3 class="panel-title">Panel Headline</h3>
-                            <p class="panel-subtitle">Panel to display most important information</p>
-                        </div>
-                        <div class="panel-body">
-                            <h4>Panel Content</h4>
-                            <p>Objectively network visionary methodologies via best-of-breed users. Phosfluorescently initiate go forward leadership skills before an expanded array of infomediaries. Monotonectally incubate web-enabled communities rather than process-centric.</p>
+            </div>
+                <div class="col-md-12">
+                <div class="panel panel-scrolling">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">本节点镜像文件</h3>
+                        <div class="right">
+                            <button type="button" class="btn-toggle-collapse"><i class="lnr lnr-chevron-up"></i></button>
+                            <button type="button" class="btn-remove"><i class="lnr lnr-cross"></i></button>
                         </div>
                     </div>
-                    <!-- END PANEL HEADLINE -->
-                </div>
+                    <div class="panel-body no-padding">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>文件编号</th>
+                                <th>镜像文件名</th>
+                                <th>创建时间</th>
+                                <th>最进使用</th>
+                                <th>备注</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>fafafa</td>
+                                    <td>adsdads</td>
+                                    <td>dsadas</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+{#                </div>#}
+            </div>
             </div>
         </div>
     </div>

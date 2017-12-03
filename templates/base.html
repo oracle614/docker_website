@@ -11,6 +11,7 @@
 	<link rel="stylesheet" href="{{ url_for('static', filename='vendor/font-awesome/css/font-awesome.min.css') }}">
 	<link rel="stylesheet" href="{{ url_for('static', filename='vendor/linearicons/style.css') }}">
 	<link rel="stylesheet" href="{{ url_for('static', filename='vendor/chartist/css/chartist-custom.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='vendor/toastr/toastr.min.css') }}">
     <!-- MAIN CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 {#    <!-- FOR DEMO PURPOSES ONLY. You should remove this in your project -->#}
@@ -44,6 +45,9 @@
 				</div>
 				<div id="navbar-menu">
 					<ul class="nav navbar-nav navbar-right">
+                        <li class="dropdown">
+                            <a href={{ request.url }} class="dropdown-toggle"><i class="lnr lnr-sync"></i> <span>Refresh</span></a>
+                        </li>
 						<li class="dropdown">
 							<a href="#" class="dropdown-toggle icon-menu" data-toggle="dropdown">
 								<i class="lnr lnr-alarm"></i>
@@ -69,7 +73,7 @@
 							</ul>
 						</li>
 						<li class="dropdown">
-							<a href="#" class="dropdown-toggle" data-toggle="dropdown"><img src="{{ avatar|default(url_for('static', filename='img/user2.png')) }}" class="img-circle" alt="Avatar"> <span>{{ username }}</span> <i class="icon-submenu lnr lnr-chevron-down"></i></a>
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown"><img src="{{ avatar|default(url_for('static', filename='img/user2.png')) }}" class="img-circle" alt="Avatar"> <span id="username">{{ username }}</span> <i class="icon-submenu lnr lnr-chevron-down"></i></a>
 							<ul class="dropdown-menu">
 								<li><a href="#"><i class="lnr lnr-user"></i> <span>My Profile</span></a></li>
 								<li><a href="#"><i class="lnr lnr-cog"></i> <span>Settings</span></a></li>
@@ -173,7 +177,17 @@
 	<script src="/static/vendor/jquery.easy-pie-chart/jquery.easypiechart.min.js"></script>
 	<script src="/static/vendor/chartist/js/chartist.min.js"></script>
 	<script src="/static/js/klorofil-common.js"></script>
+	<script src="/static/vendor/toastr/toastr.min.js"></script>
 	<script>
+        function refresh_success() {
+            toastr.options = {
+                closeButton: true,
+                positionClass: "toast-top-center",
+                progressBar: false,
+                timeOut: "5000"
+            };
+            toastr.info('Refresh success!');
+        }
 	$(function() {
 		var data, options;
 

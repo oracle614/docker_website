@@ -1,42 +1,11 @@
-from flask import Flask, render_template, url_for, redirect, request, session, flash,send_file
-from flask_sqlalchemy import SQLAlchemy
-import config
-import datetime
-from app.tool import ConnectNode
-connect = None
-
-app = Flask(__name__)
-app.config.from_object(config)
-db = SQLAlchemy(app)
+from flask import render_template, url_for, redirect, request, session, flash
+from apps.tool import ConnectNode
+from apps.tool import Event
+from apps.import_image import *
+from common import *
 
 
-# user info table
-class User(db.Model):
-    __tablename__ = 'user'
-    username = db.Column(db.String(10), nullable=False, primary_key=True)
-    password = db.Column(db.String(16), nullable=False)
-    user_id = db.Column(db.Integer, autoincrement=True)
-    email = db.Column(db.String(50), nullable=False)
-    avatar = db.Column(db.String(300))
-    createtime = db.Column(db.DateTime, nullable=False)
-    role = db.Column(db.String(10), nullable=False)
-    info = db.Column(db.Text)
-
-
-# node set table
-class Sys(db.Model):
-    __tablename__ = 'sys_set'
-    image_dir = db.Column(db.String(50), nullable=False, primary_key=True)
-
-
-# node set table
-class Node(db.Model):
-    __tablename__ = 'node_set'
-    ip = db.Column(db.String(15), nullable=False, primary_key=True)
-    port = db.Column(db.Integer)
-    username = db.Column(db.String(20), nullable=False)
-    password = db.Column(db.String(20), nullable=False)
-    image_dir = db.Column(db.String(50), db.ForeignKey('sys_set.image_dir'), nullable=False)
+connect_node = None
 
 
 # login function
@@ -104,13 +73,15 @@ def index():
     elif 'lock_stat' in session:
         return  redirect(url_for('lock'))
     user = User.query.filter(User.username == session['username']).first()
-    flush_time = datetime.datetime.strftime(datetime.datetime.now(), '%b %d, %Y  %I:%M %p')
+    event_info = Event.get_event(10)
     context = {
         'username': user.username,
         'avatar': user.avatar,
         'role': user.role,
-        'cluster_info': connect.cluster_info
+        'cluster_info': connect_node.cluster_info,
+        'event_info': event_info
     }
+    # Event.write_event('admin', 'load image start', datetime.datetime.now())
     if context.get('avatar') is None:
         context.pop('avatar')
     return render_template('index.html', **context)
@@ -135,11 +106,11 @@ def _get_node_info():
 
 if __name__ == '__main__':
     nodes_info = _get_node_info()
-    connect = ConnectNode(nodes_info)
-    connect.create_demo()
+    connect_node = ConnectNode(nodes_info)
+    connect_node.create_demo()
     db.create_all()
     try:
         app.run(debug=True)
     finally:
-        connect.close_demo()
-        connect.close()
+        connect_node.close_demo()
+        connect_node.close()
