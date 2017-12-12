@@ -2,10 +2,25 @@ from flask import render_template, url_for, redirect, request, session, flash
 from apps.tool import ConnectNode
 from apps.tool import Event
 from apps.import_image import *
+from apps.export_image import *
+from apps.load_image import *
+from apps.rm import *
+from apps.show import *
+from apps.pack import *
 from common import *
 
 
 connect_node = None
+
+
+@app.route('/user/')
+def user_set():
+    return render_template('user-set.html')
+
+
+@app.route('/sys/')
+def sys_set():
+    return render_template('sys-set.html')
 
 
 # login function
@@ -87,26 +102,26 @@ def index():
     return render_template('index.html', **context)
 
 
-def _get_node_info():
-    '''
-
-    :return:[(ip, port, username, password, dir),....]
-    '''
-    nodes = Node.query.filter().all()
-    nodes_info = []
-    for node in nodes:
-        ip = str(node.ip)
-        port = int(node.port)
-        username = str(node.username)
-        password = str(node.password)
-        image_dir = str(node.image_dir)
-        nodes_info.append((ip, port, username, password, image_dir))
-    return nodes_info
+# def _get_node_info():
+#     '''
+#
+#     :return:[(ip, port, username, password, dir),....]
+#     '''
+#     nodes = Node.query.filter().all()
+#     nodes_info = []
+#     for node in nodes:
+#         ip = str(node.ip)
+#         port = int(node.port)
+#         username = str(node.username)
+#         password = str(node.password)
+#         image_dir = str(node.image_dir)
+#         nodes_info.append((ip, port, username, password, image_dir))
+#     return nodes_info
 
 
 if __name__ == '__main__':
-    nodes_info = _get_node_info()
-    connect_node = ConnectNode(nodes_info)
+    # nodes_info = _get_node_info()
+    connect_node = ConnectNode()
     connect_node.create_demo()
     db.create_all()
     try:

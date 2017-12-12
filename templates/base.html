@@ -12,8 +12,12 @@
 	<link rel="stylesheet" href="{{ url_for('static', filename='vendor/linearicons/style.css') }}">
 	<link rel="stylesheet" href="{{ url_for('static', filename='vendor/chartist/css/chartist-custom.css') }}">
 	<link rel="stylesheet" href="{{ url_for('static', filename='vendor/toastr/toastr.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.min.css') }}">
+{% block css %}{% endblock %}
     <!-- MAIN CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <!-- Bootstrp-select CSS -->
+    <link rel="stylesheet", href="{{ url_for('static', filename='vendor/bootstrap-select/dist/css/bootstrap-select.min.css') }}"
 {#    <!-- FOR DEMO PURPOSES ONLY. You should remove this in your project -->#}
 {#	<link rel="stylesheet" href="{{ url_for('static', filename='css/demo.css') }}">#}
 	<!-- GOOGLE FONTS -->
@@ -53,7 +57,7 @@
 								<i class="lnr lnr-alarm"></i>
 								<span class="badge bg-danger">5</span>
 							</a>
-							<ul class="dropdown-menu notifications">
+							<ul class="dropdown-menu">
                                 <!-- message -->
 								<li><a href="#" class="notification-item"><span class="dot bg-warning"></span>System space is almost full</a></li>
 								<li><a href="#" class="notification-item"><span class="dot bg-danger"></span>You have 9 unfinished tasks</a></li>
@@ -99,8 +103,8 @@
 							<a href="#subImport" data-toggle="collapse" class="collapsed"><i class="lnr lnr-enter"></i> <span>导入镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							<div id="subImport" class="collapse ">
 								<ul class="nav">
-									<li><a href="" class="">主节点导入</a></li>
-									<li><a href="" class="">本地导入</a></li>
+									<li><a href="{{ url_for('import_port') }}" class="">主节点导入</a></li>
+									<li><a href="{{ url_for('import_file') }}" class="">本地导入</a></li>
 								</ul>
 							</div>
 						</li>
@@ -108,8 +112,8 @@
 							<a href="#subExport" data-toggle="collapse" class="collapsed"><i class="lnr lnr-exit"></i> <span>导出镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							<div id="subExport" class="collapse ">
 								<ul class="nav">
-									<li><a href="#" class="">导出至文件夹</a></li>
-									<li><a href="#" class="">导出至本地</a></li>
+{#									<li><a href="#" class="">导出至文件夹</a></li>#}
+									<li><a href="{{ url_for('export_image') }}" class="">导出至本地</a></li>
 								</ul>
 							</div>
 						</li>
@@ -117,17 +121,30 @@
 							<a href="#subLoad" data-toggle="collapse" class="collapsed"><i class="lnr lnr-link"></i> <span>加载镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							<div id="subLoad" class="collapse ">
 								<ul class="nav">
-									<li><a href="#" class="">加载文件夹镜像</a></li>
-									<li><a href="#" class="">加载Github镜像</a></li>
+									<li><a href="{{ url_for('load_file') }}" class="">加载文件夹镜像</a></li>
+									<li><a href="{{ url_for('load_url') }}" class="">加载Github镜像</a></li>
 								</ul>
 							</div>
 						</li>
+                        <li><a class="" href="{{ url_for('pack') }}" ><i class="lnr lnr-layers"></i> <span>打包镜像</span></a></li>
+                        <!--
+                        <li>
+							<a href="#subPacket" data-toggle="collapse" class="collapsed"><i class="lnr lnr-layers"></i> <span>打包镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
+							<div id="subPacket" class="collapse ">
+								<ul class="nav">
+									<li><a href="#" class="">打包至文件夹</a></li>
+									<li><a href="#" class="">打包至本地</a></li>
+								</ul>
+							</div>
+						</li>
+						-->
+
 						<li>
 							<a href="#subDrop" data-toggle="collapse" class="collapsed"><i class="lnr lnr-trash"></i> <span>删除镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							<div id="subDrop" class="collapse ">
 								<ul class="nav">
-                                    <li><a href="#" class="">删除集群镜像</a></li>
-									<li><a href="#" class="">删除镜像文件</a></li>
+                                    <li><a href="{{ url_for('rm_image') }}" class="">删除集群镜像</a></li>
+									<li><a href="{{ url_for('rm_file') }}" class="">删除镜像文件</a></li>
 								</ul>
 							</div>
 						</li>
@@ -135,8 +152,8 @@
 							<a href="#subCat" data-toggle="collapse" class="collapsed"><i class="lnr lnr-menu"></i> <span>查看镜像</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							<div id="subCat" class="collapse ">
 								<ul class="nav">
-									<li><a href="#" class="">查看集群镜像</a></li>
-									<li><a href="#" class="">查看镜像文件</a></li>
+									<li><a href="{{ url_for('show_image') }}" class="">查看集群镜像</a></li>
+									<li><a href="{{ url_for('show_file') }}" class="">查看镜像文件</a></li>
 								</ul>
 							</div>
 						</li>
@@ -145,8 +162,9 @@
 							    <a href="#subSet" data-toggle="collapse" class="collapsed"><i class="lnr lnr-cog"></i> <span>集群管理</span> <i class="icon-submenu lnr lnr-chevron-left"></i></a>
 							    <div id="subSet" class="collapse ">
 								    <ul class="nav">
-								    	<li><a href="#" class="">集群参数设置</a></li>
+								    	<li><a href="{{ url_for('sys_set') }}" class="">集群节点管理</a></li>
 								    	<li><a href="#" class="">节点镜像管理</a></li>
+								    	<li><a href="{{ url_for('user_set') }}" class="">集群用户管理</a></li>
 								    </ul>
 							    </div>
 						    </li>
@@ -177,7 +195,10 @@
 	<script src="/static/vendor/jquery.easy-pie-chart/jquery.easypiechart.min.js"></script>
 	<script src="/static/vendor/chartist/js/chartist.min.js"></script>
 	<script src="/static/js/klorofil-common.js"></script>
+    <script src="/static/vendor/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
 	<script src="/static/vendor/toastr/toastr.min.js"></script>
+    {% block script %}
+    {% endblock %}
 	<script>
         function refresh_success() {
             toastr.options = {
