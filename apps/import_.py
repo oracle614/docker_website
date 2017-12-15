@@ -27,16 +27,19 @@ def import_file():
 @app.route('/import/info/', methods=['POST'])
 def get_import_info():
     """
-
+    Gets the list of main node images and the front-end select parameters
     :return:{'node_list':[ip1, ip2,,,,], 'image_file_list': [[id, name, create_time, size],...]}
     """
     received = request.get_json()
     info = {'node_list': [], 'image_file_list': []}
     master_node_ip = Sys.query.filter().first().master_node
     if received.get('type') == 'node_list':
+        # Get all node
         all_node_list = Node.query.filter().all()
         if 'username' in session:
             user_role = User.query.filter(User.username == session.get('username')).first().role
+            # Only when the current user's role is warden, the IP address of the master node will be displayed in the
+            # previous section.
             for node in all_node_list:
                 if node.ip != master_node_ip:
                     info.get('node_list').append(node.ip)
@@ -48,12 +51,3 @@ def get_import_info():
     else:
         pass
     return json.dumps(info)
-
-
-def _get_image_file_list(cmd):
-    """
-    :return
-    :param cmd:
-    :return:
-    """
-    pass

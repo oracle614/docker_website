@@ -91,27 +91,39 @@
         });
         /* get node list end */
         /* get tar file list start */
-        $(document).ready(function () {
-           $.ajax({
-                data: JSON.stringify({'type': 'image_file_list'}),
-                dataType: 'json',
-                type: 'POST',
-                contentType: 'application/json; charset=UTF-8',
-                url: '{{ url_for('get_import_info') }}',
-                success: function (resful, status) {
-                    if(status) {
-                        var button = document.getElementById('import_button');
-                        button.innerHTML = '导出';
-{#                        var div1 = button.parentNode;#}
-{#                        var div2 = button.previousSibling;#}
-{#                        div1.setAttribute('class', 'col-md-1');#}
-{#                        div2.setAttribute('class', 'col-md-5');#}
-                        var image_file_list = resful.image_file_list;
-                        make_tar_format(image_file_list);
+        get_image_list();
+        function get_image_list() {
+            $(document).ready(function () {
+               $.ajax({
+                    data: JSON.stringify({'type': 'image_file_list'}),
+                    dataType: 'json',
+                    type: 'POST',
+{#                    timeout: 5000,#}
+                    contentType: 'application/json; charset=UTF-8',
+                    url: '{{ url_for('get_import_info') }}',
+                    success: function (resful, status) {
+                        if(status) {
+                            var button = document.getElementById('import_button');
+                            button.innerHTML = '导出';
+{#                            var div1 = button.parentNode;#}
+{#                            var div2 = div1.previousSibling;#}
+{#                            div1.setAttribute('class', 'col-md-1');#}
+{#                            div2.setAttribute('class', 'col-md-5');#}
+                            var image_file_list = resful.image_file_list;
+                            make_tar_format(image_file_list);
+                        }
                     }
-                }
-           });
-        });
+{#                    error: function () {#}
+{#                        sleep(Date.now(), 2);#}
+{#                        get_image_list();#}
+{#                    }#}
+               });
+            });
+        }
+        function sleep(t, d) {
+            while(Date.now - t <= d);
+        }
+
         /* get image file list end */
         /* make image list start */
         function make_tar_format(data) {

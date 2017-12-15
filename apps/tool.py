@@ -9,7 +9,7 @@ from flask import session, redirect, url_for
 class ConnectNode(object):
     def __init__(self):
         """
-        init connect
+            init connect
         :param nodes_info:format:[(ip, port, username, password, dir),....]
         :result nodes format: [[trans object, ssh object, (ip, port, username, password, dir)],....]
         """
@@ -22,38 +22,27 @@ class ConnectNode(object):
         self.logger.addHandler(headler)
         self.demo_status = True
         self.cluster_info = {}
-        # self.nodes_info = nodes_info
-        # assert isinstance(nodes_info, list)
-        # for node_info in nodes_info:
-        #     assert isinstance(node_info[1], int)
-        #     try:
-        #         trans = paramiko.Transport((node_info[0], node_info[1]))
-        #         trans.connect(username=node_info[2], password=node_info[3])
-        #         ssh = paramiko.SSHClient()
-        #         ssh._transport = trans
-        #     except:
-        #         ssh = None
-        #         trans = None
-        #     self.nodes.append([trans, ssh, node_info])
+        self.nodes_info = []
+        # When the value is modified, set the flag bit to False, then other variables are forbidden to read the
+        # restricted variables
+        self.flush_status = False
 
     def create_demo(self):
-        # Create a background process to monitor the status of the cluster.
+        """
+            The background process is created to update nodes_info, nodes, and obtain the overall information of the node
+        :return: There is no return value
+        """
         if not os.path.exists('log'):
             os.makedirs('log')
-        # demo2 = threading.Thread(target=self._create_ssh, name='thread-demo2')
         demo1 = threading.Thread(target=self._demo, name='thread-demo1')
-        # demo3 = threading.Thread(target=self._get_node_info, name='thread-demo3')
-        # demo3.start()
-        # time.sleep(1)
-        # demo2.start()
-        # time.sleep(2)
         demo1.start()
 
     def _get_node_info(self):
         """
-        set nodes_info
+            Get the cluster node information from the database and write it to self.nodes_info
         :return:node_info format: [(ip, port, username, password, dir, master),....]
         """
+        # get node info from DB
         nodes = Node.query.filter().all()
         nodes_info = []
         for node in nodes:
@@ -73,13 +62,13 @@ class ConnectNode(object):
 
     def _create_ssh(self):
         """
-        set self.nodes
-        :return: format: [[trans, ssh, (ip, port, username, password, dir, master)]...]
+            Create paramiko connection using the nodes_info table. If the connection is successful, the first two items are
+        both trans objects and SSH objects, otherwise None is convenient for subsequent operation.
+        :return: nodes format: [[trans, ssh, (ip, port, username, password, dir, master)]...]
         """
-        self.nodes = []
+        temp = []
         for node_info in self.nodes_info:
             try:
-                # print node_info
                 trans = paramiko.Transport((node_info[0], node_info[1]))
                 trans.connect(username=node_info[2], password=node_info[3])
                 ssh = paramiko.SSHClient()
@@ -87,7 +76,8 @@ class ConnectNode(object):
             except Exception, e:
                 ssh = None
                 trans = None
-            self.nodes.append([trans, ssh, node_info])
+            temp.append([trans, ssh, node_info])
+        self.nodes = temp
 
     def _demo(self):
         """
@@ -99,8 +89,12 @@ class ConnectNode(object):
         cmd_alive_container = 'docker ps|wc -l'
         cmd_docker_image = 'docker images|wc -l'
         while self.demo_status:
+            self.flush_status = False
+            # Update node information.
             self._get_node_info()
+            # Update ssh connect.
             self._create_ssh()
+            self.flush_status = True
             try:
                 cluster_node_num = len(self.nodes)
                 cluster_container_num = 0
@@ -114,15 +108,14 @@ class ConnectNode(object):
                 cluster_info = {}
                 result_tar_image = []
                 cluster_nodes_info = []
-                # Each node has a different folder path.
-                # print self.nodes
+                # Each node has its own file directory. Unable to perform batch operations.
                 for node in self.nodes:
                     if node[0] is not None and node[1] is not None:
                         cmd_tar_image = 'ls {dirs} |wc -l'.format(dirs=node[2][4])
                         stdin, stdout, stderr = node[1].exec_command(cmd_tar_image)
                         status = 'success'
                     else:
-                        # print 'waht'
+                        # ssh is default
                         status = 'defeated'
                         stdout, stderr = None, None
                     result_tar_image.append((node[2][0], status, (stdout, stderr)))
@@ -137,8 +130,8 @@ class ConnectNode(object):
                             node_alive_container_num = int(result_alive_container[index][2][0].readlines()[0].split('\n')[0])
                             node_docker_num = int(result_docker_image[index][2][0].readlines()[0].split('\n')[0])
                             node_tar_num = int(result_tar_image[index][2][0].readlines()[0].split('\n')[0])
-                        except Exception,e:
-                            # pass
+                        except Exception, e:
+                            # write log to json
                             self.logger.error(e.message)
                         cluster_container_num += node_container_num
                         cluster_alive_container_num += node_alive_container_num
@@ -166,50 +159,57 @@ class ConnectNode(object):
                 cluster_info['cluster_nodes_info'] = cluster_nodes_info
                 # print cluster_info
                 self.cluster_info = cluster_info
-                time.sleep(1)
+                time.sleep(20)
                 self.close()
-            except:
+                print '新循环开始'
+            except Exception, e:
+                print e
                 self.close()
-
-    def cmds(self, cmd):
-        """
-        exec cmd on all node
-        :param cmd: shell cmd
-        :return: [(ip, status, (stdin, stderr))]
-        """
-        end = []
-        for node in self.nodes:
-            temp = self.cmd(node, cmd)
-            status = temp[1]
-            result = temp[2]
-            end.append((node[2][0], status, result))
-        return end
 
     def cmd(self, node, cmd):
         """
-        exec cmd on a node
+        Executes the specified command on the specified node.
         :param node: format:[trans, ssh, (ip, port, username, password, dir, master)]
         :param cmd: shell cmd
         :return: (ip, status, (stdout, stderr))
         """
         if node[0] is not None and node[1] is not None:
-            stdin, stdout, stderr = node[1].exec_command(cmd)
+            _, stdout, stderr = node[1].exec_command(cmd)
             status = 'success'
         else:
             status = 'defeated'
             stdout, stderr = None, None
         return node[2][0], status, (stdout, stderr)
 
+    def cmds(self, cmd):
+        """
+        Perform the same command on all nodes.
+        :param cmd: shell cmd
+        :return: [(ip, status, (stdin, stderr))]
+        """
+        end = []
+        nodes = self.nodes
+        for node in nodes:
+            temp = self.cmd(node, cmd)
+            status = temp[1]
+            result = temp[2]
+            end.append((node[2][0], status, result))
+        return end
+
     def get_image_file_list(self, ip):
         """
-        Gets the list of mirrored tar files for the specified node, and then
+        Gets the image file information in the specified IP node.
         :param ip: ip str,eg:10.42.0.74
         :return:[[id, filename, create_time, file_size],...]
         """
         info = []
+        #
+        while not self.flush_status:
+            pass
         ip_dir = self._get_ip_attr(ip, 'dir')
         node = self._get_ip_attr(ip, 'info')
         cmd = 'ls {ip_dir}'.format(ip_dir=ip_dir)
+        print node
         exec_result = self.cmd(node, cmd)
         if exec_result[1] == 'success':
             filess = exec_result[2][0].readlines()
@@ -220,7 +220,6 @@ class ConnectNode(object):
                 create_time = self._get_file_time(node, files)
                 file_size = self._get_file_size(node, files)
                 info.append([ids, files, create_time, file_size])
-        print info
         return info
 
     def get_docker_image_list(self, ip):
@@ -228,10 +227,10 @@ class ConnectNode(object):
 
     def _get_ip_attr(self, ip, attr):
         """
-        information from self.nodes
-        :param ip:
-        :param attr:
-        :return:
+        Returns information about the specified IP, and None if the IP does not exist in the database.
+        :param ip: str; eg:'10.42.0.74'
+        :param attr: key values
+        :return: node info
         """
         index = 0
         for node in self.nodes:
@@ -260,28 +259,48 @@ class ConnectNode(object):
 
     def _get_file_time(self, node, filename):
         """
-
-        :param node:
-        :param filename:
-        :return:
+        Returns the creation date of the specified file under the mirror folder directory in the specified node.
+        :param node: [trans, ssh, (......)] same as self.nodes[0]
+        :param filename: file name
+        :return: file_time(str)
         """
-        filepath = node[2][4] + '/' + filename
-        cmd = 'ls --full-time {filepath}|cut -d " " -f 6,7|cut -d "." -f 1'.format(filepath=filepath)
-        time = self.cmd(node, cmd)[2][0].readlines()[0].split('\n')[0]
-        return time
+        path = node[2][4] + '/' + filename
+        cmd = 'ls --full-time {path}|cut -d " " -f 6,7|cut -d "." -f 1'.format(path=path)
+        result = self.cmd(node, cmd)
+        file_time = None
+        if result[1] == 'success':
+            file_time = result[2][0].readlines()[0].split('\n')[0]
+        return file_time
 
     def _get_file_size(self, node, filename):
-        filepath = node[2][4] + '/' + filename
-        cmd = 'ls -lht {filepath}|cut -d " " -f 5'.format(filepath=filepath)
-        temp = self.cmd(node, cmd)[2][0].readlines()[0].split('\n')[0]
-        print temp
-        return temp
+        """
+        Returns the size of the specified file in the image folder directory in the specified node.
+        :param node: [trans, ssh, (......)] same as self.nodes[0]
+        :param filename: file name
+        :return:
+        """
+        path = node[2][4] + '/' + filename
+        cmd = 'ls -lht {path}|cut -d " " -f 5'.format(path=path)
+        result = self.cmd(node, cmd)
+        file_size = None
+        if result[1] == 'success':
+            file_size = result[2][0].readlines()[0].split('\n')[0]
+        return file_size
 
     def close_demo(self):
+        """
+        Close the background daemon.
+        :return: There is no return value.
+        """
         self.demo_status = False
 
     def close(self):
-        for node in self.nodes:
+        """
+        Close all paramiko connections.
+        :return: There is no return value.
+        """
+        nodes = self.nodes
+        for node in nodes:
             if node[0] is not None or node[1] is not None:
                 node[0].close()
                 node[1].close()
@@ -296,9 +315,9 @@ class Event(object):
     def write_event(username, event, date):
         """
         Writes the event to the database.
-        :param username:The username of the event executor
-        :param event:The contents of what happened
-        :param date:When did it happen
+        :param username: The username of the event executor
+        :param event: The contents of what happened
+        :param date: When did it happen.It is a python datetime object
         :return: None
         """
         date = date.strftime('%Y-%m-%d %H:%M:%S')
@@ -312,7 +331,7 @@ class Event(object):
         """
         Package the latest number of events
         :param num: Package the latest number of events
-        :return: Events in the dictionary [{'username': ,avatar': ,'date': ,'event_info':  }, ......]
+        :return: Events in the dictionary. format: [{'username': '',avatar': '','date': '','event_info': ''}, ......]
         """
         events = EventInfo.query.order_by(db.desc(EventInfo.date)).limit(num)
         events_to_list = []
@@ -350,10 +369,16 @@ class Event(object):
         return events_to_list
 
 
+# Declare connect_node for other class access.
 connect_node = None
 
 
 def init():
+    """
+        Initializes the ConnectNode object and creates the background daemon to update the information. This method runs
+    only once during service operation.
+    :return: There is no return value.
+    """
     global connect_node
     connect_node = ConnectNode()
     connect_node.create_demo()
@@ -362,19 +387,22 @@ def init():
 class Tools(object):
     @staticmethod
     def state_judgment():
+        """
+        !!! This feature may be deprecated.!!!
+        Determine the user status and jump to the relevant page.
+        :return: There is no return value.
+        """
         if 'username' not in session:
             redirect(url_for('login'))
         elif 'stat_lock' in session:
             redirect(url_for('lock'))
 
     @staticmethod
-    def get_ip_list():
-        temp = Node.quary.filter().all()
-        ip_list = []
-        for ip in temp:
-            ip_list.append(ip.ip)
-
-    @staticmethod
     def get_connect_node():
+        """
+            Returns the global variable connect_node to facilitate access to the connection object instance at other
+        nodes.This instance contains a series of cluster operation functions.
+        :return: ConnectNode obj
+        """
         global connect_node
         return connect_node

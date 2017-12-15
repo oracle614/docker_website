@@ -15,7 +15,6 @@ def index():
     elif 'lock_stat' in session:
         return redirect(url_for('lock'))
     cluster_info = Tools.get_connect_node().cluster_info
-    print cluster_info
     return render_template('index.html', cluster_info=cluster_info)
 
 
@@ -25,7 +24,5 @@ def get_index_event():
     Return time dictionary information
     :return: {'events': [{'username': ,avatar': ,'date': ,'event_info':  }, ......]}
     """
-    print request.get_json()
     event = {'events': Event.get_event(10)}
-    print event
     return json.dumps(event)
