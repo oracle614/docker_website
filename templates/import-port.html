@@ -9,7 +9,7 @@
                 <br>
                 <div class="panel panel-scrolling">
                     <div class="panel-heading">
-                        <h3 class="panel-title" onclick="get_tar_info('main')">主节点镜像文件</h3>
+                        <h3 class="panel-title">主节点镜像文件</h3>
                         <div class="right">
                             <button type="button" class="btn-toggle-collapse"><i class="lnr lnr-chevron-up"></i></button>
                             <button type="button" class="btn-remove"><i class="lnr lnr-cross"></i></button>
@@ -23,11 +23,11 @@
                                 <th>文件编号</th>
                                 <th>镜像文件名</th>
                                 <th>创建时间</th>
-                                <th>备注</th>
+                                <th>大小</th>
                                 <th>导入</th>
                             </tr>
                             </thead>
-                            <tbody id="form-master">
+                            <tbody id="image_file_list">
                             </tbody>
                         </table>
                         </form>
@@ -40,21 +40,19 @@
                             <form class="form-horizontal">
                                 <div class="row">
                                     <label class="control-label col-md-1">
-                                        导入节点
+                                        节点
                                     </label>
-                                    <div class="col-md-5">
-                                        <select id="usertype" class="selectpicker form-control" multiple>
-                                            <option value="0">10.42.0.74</option>
-                                            <option value="1">10.42.0.75</option>
-                                            <option value="2">10.42.0.76</option>
-                                            <option value="3">10.42.0.77</option>
-                                            <option value="4">10.42.0.78</option>
+                                    <div class="col-md-5" id="select_parent">
+                                        <select id="node_list" class="selectpicker form-control" multiple>
                                         </select>
                                     </div>
-                                    <div class="col-md-5"> </div>
+                                    <div class="col-md-4"> </div>
 {#                                    <div class="col-md-6"></div>#}
-                                    <div class="col-md-1">
-                                        <button class="btn btn-primary" type="button">导入</button>
+                                    <div class="col-md-2">
+                                        <button class="btn btn-primary" type="button" id="import_button">
+                                            <i class="fa fa-spinner fa-spin" id="loading"></i>
+                                            Loading
+                                        </button>
                                     </div>
                                 </div>
                             </form>
@@ -65,51 +63,71 @@
         </div>
     </div>
 {% endblock %}
+<!-- private js start -->
 {% block script %}
     <script>
-{#        $(window).on('load', function () {#}
-{#            $('#usertype').selectpicker({#}
-{#            'countSelectedText': 2#}
-{#            });#}
-{#        });#}
-        function get_tar_info(type) {
-            var ip = null;
-            if(type === 'main') {
-                ip = '{{ cluster_info.master_ip }}';
-            }
-            else {
-                ip = '1';
-            }
-            $.ajax({
-                async: false,
-                data: ip,
+        /* get node list start */
+        $(document).ready(function () {
+           $.ajax({
+                data: JSON.stringify({'type': 'node_list'}),
                 dataType: 'json',
                 type: 'POST',
-                success: make_tar_format,
-                url: '{{ url_for("import_port") }}'
-            });
-        }
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_import_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        var node_list = resful.node_list;
+                        for(var i=0; i<node_list.length; i++) {
+                            var option = document.createElement('option');
+                            option.setAttribute('selected', true);
+                            option.setAttribute('value', node_list[i]);
+                            option.innerText = node_list[i];
+                            $("#node_list").append(option);
+                        }
+                        $("#node_list").selectpicker("refresh");
+                    }
+                }
+           });
+        });
+        /* get node list end */
+        /* get tar file list start */
+        $(document).ready(function () {
+           $.ajax({
+                data: JSON.stringify({'type': 'image_file_list'}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_import_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        var button = document.getElementById('import_button');
+                        button.innerHTML = '导出';
+{#                        var div1 = button.parentNode;#}
+{#                        var div2 = button.previousSibling;#}
+{#                        div1.setAttribute('class', 'col-md-1');#}
+{#                        div2.setAttribute('class', 'col-md-5');#}
+                        var image_file_list = resful.image_file_list;
+                        make_tar_format(image_file_list);
+                    }
+                }
+           });
+        });
+        /* get image file list end */
+        /* make image list start */
         function make_tar_format(data) {
             /*
             * data format:
-            * master node example:{'type':'master', 'files': [(1, 'hello-world.tar', '2017-05-06 14:12:32', 'test tar file'), ]}
-            *0
+            * example:[[id, file_name, create_time, size], ...]
+            *
             * */
-            var data_type = data['type'];
-            var form;
-            if(data_type === 'master') {
-                form = document.getElementById('form-master');
-            }
-            else {
-                form = document.getElementById('form-node');
-            }
-            for(var i =0; i<data['files'].length; i++) {
+            image_list = document.getElementById('image_file_list');
+            for(var i =0; i<data.length; i++) {
                 var row = document.createElement('tr');
-                for(var j=0; j<data['files'][i].length;j++) {
+                for(var j=0; j<data[i].length;j++) {
                    var num = document.createElement('td');
-                   num.innerText = data['files'][i][j];
+                   num.innerText = data[i][j];
                    row.appendChild(num);
-                   if(j === data['files'][i].length - 1) {
+                   if(j === data[i].length - 1) {
                        var temp = document.createElement('td');
                        var checkbox = document.createElement('input');
                        checkbox.setAttribute("type", "checkbox");
@@ -118,8 +136,10 @@
                        row.appendChild(temp);
                    }
                 }
-                form.appendChild(row);
+                image_list.appendChild(row);
             }
         }
+        /* make image list end */
     </script>
 {% endblock %}
+<!-- private js stop -->

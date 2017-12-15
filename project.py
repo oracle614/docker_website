@@ -1,13 +1,15 @@
 from flask import render_template, url_for, redirect, request, session, flash
 from apps.tool import ConnectNode
 from apps.tool import Event
-from apps.import_image import *
-from apps.export_image import *
-from apps.load_image import *
+from apps.import_ import *
+from apps.export import *
+from apps.load import *
 from apps.rm import *
 from apps.show import *
+from apps.index import *
 from apps.pack import *
 from common import *
+from apps.tool import *
 
 
 connect_node = None
@@ -81,27 +83,6 @@ def lock():
             return redirect(url_for('lock'))
 
 
-@app.route('/')
-def index():
-    if 'username' not in session:
-        return redirect(url_for('login'))
-    elif 'lock_stat' in session:
-        return  redirect(url_for('lock'))
-    user = User.query.filter(User.username == session['username']).first()
-    event_info = Event.get_event(10)
-    context = {
-        'username': user.username,
-        'avatar': user.avatar,
-        'role': user.role,
-        'cluster_info': connect_node.cluster_info,
-        'event_info': event_info
-    }
-    # Event.write_event('admin', 'load image start', datetime.datetime.now())
-    if context.get('avatar') is None:
-        context.pop('avatar')
-    return render_template('index.html', **context)
-
-
 # def _get_node_info():
 #     '''
 #
@@ -120,12 +101,9 @@ def index():
 
 
 if __name__ == '__main__':
-    # nodes_info = _get_node_info()
-    connect_node = ConnectNode()
-    connect_node.create_demo()
-    db.create_all()
+    init()
     try:
         app.run(debug=True)
     finally:
-        connect_node.close_demo()
-        connect_node.close()
+        Tools.get_connect_node().close_demo()
+        Tools.get_connect_node().close()

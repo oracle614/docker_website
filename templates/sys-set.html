@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}User Page | Klorofil - Docker Manager System{% endblock %}
+{% block main %}
+    <!-- MAIN CONTENT -->
+    <div class="main-content" >
+        <div class="container-fluid">
+{#            <div class="row">#}
+            <div class="col-md-12">
+                <div class="panel">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">集群参数设置</h3>
+                        <div class="right">
+                            <button type="button" class="btn-toggle-collapse"><i class="lnr lnr-chevron-up"></i></button>
+                            <button type="button" class="btn-remove"><i class="lnr lnr-cross"></i></button>
+                        </div>
+                    </div>
+                    <div class="panel-body no-padding">
+                        <table class="table table-condensed">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>IP</th>
+                                    <th>Port</th>
+                                    <th>Username</th>
+                                    <th>Password</th>
+                                    <th>Image File</th>
+                                    <th>Master</th>
+                                    <td>Operator</td>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody">
+                                <tr id="user_1">
+                                    <td>1</td>
+                                    <td>10.42.0.74</td>
+                                    <td>22</td>
+                                    <td>pirate</td>
+                                    <td>hypriot</td>
+                                    <td>/home/pirate/imageDir</td>
+                                    <td><input type="radio" name="select_master"></td>
+                                    <td>
+                                        <li class="glyphicon glyphicon-pencil"></li>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <li class="glyphicon glyphicon-remove" id="delete" onclick="delete_user(this)"></li>
+                                    </td>
+                                </tr>
+                                <tr id="user_2">
+                                    <td>2</td>
+                                    <td>10.42.0.75</td>
+                                    <td>22</td>
+                                    <td>pirate</td>
+                                    <td>hypriot</td>
+                                    <td>/home/pirate/imageDir</td>
+                                    <td><input type="radio" name="select_master"></td>
+                                    <td id="finally">
+                                        <li class="glyphicon glyphicon-pencil"></li>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <li class="glyphicon glyphicon-remove" onclick="delete_user(this)"></li>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <li class="glyphicon glyphicon-plus" id="add"></li>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                             <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                             <h4 class="modal-title" id="myModalLabel">新增</h4>
+                                    </div>
+                                    <form name="add">
+                                    <div class="modal-body">
+                                        <div class="form-group">
+                                            <label for="txt_departmentlevel">IP</label>
+                                            <input type="text" name="txt_avatar" class="form-control" id="txt_avatar" placeholder="">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="txt_departmentlevel">端口</label>
+                                            <input type="text" name="txt_avatar" class="form-control" id="txt_avatar" placeholder="">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="txt_departmentname">用户名</label>
+                                            <input type="text" name="txt_username" class="form-control" id="txt_username" placeholder="英文或数字，最多10位">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="txt_parentdepartment">密码</label>
+                                            <input type="text" name="txt_password" class="form-control" id="txt_password" placeholder="最多16位">
+                                        </div>
+                                        <div class="form-group">
+                                          <label for="txt_statu">镜像目录</label>
+                                          <input type="text" name="txt_role" class="form-control" id="txt_role" placeholder="">
+                                        </div>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                          <button type="button" class="btn btn-default" data-dismiss="modal"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span>关闭</button>
+                                          <button type="button" id="submit_add" class="btn btn-primary" data-dismiss="modal"><span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span>保存</button>
+                                    </div>
+                                        </form>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block css %}
+{#    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-table/dist/bootstrap-table.min.css') }}">#}
+{#    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/x-editable/dist/bootstrap-editable/css/bootstrap-editable.css') }}">#}
+{% endblock %}
+{% block script %}
+    <script src="/static/vendor/bootstrap-table/dist/locale/bootstrap-table-zh-CN.js"></script>
+    <script src="/static/vendor/jQuery-Smart-Wizard/js/jquery.smartWizard.js"></script>
+    <script>
+        function delete_user(this_object) {
+            tbody = document.getElementById('tbody');
+            tr = this_object.parentNode.parentNode;
+            tbody.removeChild(tr);
+        }
+        $("#add").click(function () {
+            $("#myModalLabel").text("新增");
+            $('#myModal').modal();
+        });
+        $("#submit_add").click(function () {
+            var tbody = document.getElementById('tbody');
+            var username = document.getElementById('txt_username').value;
+            var password = document.getElementById('txt_password').value;
+            var avatar = document.getElementById('txt_avatar').value;
+            var role = document.getElementById('txt_role').value;
+            var info = document.getElementById('txt_info').value;
+            var tr = document.createElement('tr');
+            var username_td = document.createElement('td');
+{#            username_id.innerText = username;#}
+            alert('wds');
+            var password_td = document.createElement('td');
+{#            password_id.innerText = password;#}
+            var time_td = document.createElement('td');
+{#            time_id.innerText = "";#}
+            var role_td = document.createElement('td');
+{#            role_id.innerText = role;#}
+            var info_td = document.createElement('td');
+{#            info_id.innerText = info;#}
+{#            alert(password);#}
+            tr.appendChild(username_td);
+            tr.appendChild(password_td);
+            tr.appendChild(time_td);
+            tr.appendChild(role_td);
+            tr.appendChild(info_td);
+{#            tr.appendChild(document.getElementById('tbody').lastElementChild.lastElementChild);#}
+            tbody.appendChild(tr);
+        })
+    </script>
+{% endblock %}

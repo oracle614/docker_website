@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Remove Page | Klorofil - Docker Manager System{% endblock %}
+{% block main %}
+    <!-- MAIN CONTENT -->
+    <div class="main-content" >
+        <div class="container-fluid">
+{#            <div class="row">#}
+            <div class="col-md-12">
+                <br>
+                <div class="panel panel-scrolling">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">节点镜像文件</h3>
+                        <div class="right">
+                            <button type="button" class="btn-toggle-collapse"><i class="lnr lnr-chevron-up"></i></button>
+                            <button type="button" class="btn-remove"><i class="lnr lnr-cross"></i></button>
+                        </div>
+                    </div>
+                    <div class="panel-body no-padding">
+                        <form action="#" method="post">
+                        <table class="table table-condensed">
+                            <thead>
+                            <tr>
+                                <th>文件编号</th>
+                                <th>镜像文件名</th>
+                                <th>创建时间</th>
+                                <th>最近使用</th>
+                                <th>备注</th>
+                                <th>选择</th>
+                            </tr>
+                            </thead>
+                            <tbody id="form-master">
+                            </tbody>
+                        </table>
+                        </form>
+                    </div>
+                    <div class="panel-footer">
+                        <!--
+                        <form class="form-horizontal">
+                        -->
+                        <div class="form-group">
+                            <form class="form-horizontal">
+                                <div class="row">
+                                    <label class="control-label col-md-1">
+                                        节点
+                                    </label>
+                                    <div class="col-md-5">
+                                        <select id="usertype" class="selectpicker form-control">
+                                            <option value="0">10.42.0.74</option>
+                                            <option value="1">10.42.0.75</option>
+                                            <option value="2">10.42.0.76</option>
+                                            <option value="3">10.42.0.77</option>
+                                            <option value="4">10.42.0.78</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2"></div>
+                                    <!--
+                                    <div class="col-md-2">
+                                         <button class="btn btn-primary" type="button">打包至文件夹</button>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button class="btn btn-primary" type="button">打包至本地</button>
+                                    </div>
+                                    -->
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block script %}
+    <script>
+{#        $(window).on('load', function () {#}
+{#            $('#usertype').selectpicker({#}
+{#            'countSelectedText': 2#}
+{#            });#}
+{#        });#}
+        function get_tar_info(type) {
+            var ip = null;
+            if(type === 'main') {
+                ip = '{{ cluster_info.master_ip }}';
+            }
+            else {
+                ip = '1';
+            }
+            $.ajax({
+                async: false,
+                data: ip,
+                dataType: 'json',
+                type: 'POST',
+                success: make_tar_format,
+                url: '{{ url_for("import_port") }}'
+            });
+        }
+        function make_tar_format(data) {
+            /*
+            * data format:
+            * master node example:{'type':'master', 'files': [(1, 'hello-world.tar', '2017-05-06 14:12:32', 'test tar file'), ]}
+            *0
+            * */
+            var data_type = data['type'];
+            var form;
+            if(data_type === 'master') {
+                form = document.getElementById('form-master');
+            }
+            else {
+                form = document.getElementById('form-node');
+            }
+            for(var i =0; i<data['files'].length; i++) {
+                var row = document.createElement('tr');
+                for(var j=0; j<data['files'][i].length;j++) {
+                   var num = document.createElement('td');
+                   num.innerText = data['files'][i][j];
+                   row.appendChild(num);
+                   if(j === data['files'][i].length - 1) {
+                       var temp = document.createElement('td');
+                       var checkbox = document.createElement('input');
+                       checkbox.setAttribute("type", "checkbox");
+                       checkbox.checked = true;
+                       temp.appendChild(checkbox);
+                       row.appendChild(temp);
+                   }
+                }
+                form.appendChild(row);
+            }
+        }
+    </script>
+{% endblock %}
