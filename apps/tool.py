@@ -23,9 +23,14 @@ class ConnectNode(object):
         self.demo_status = True
         self.cluster_info = {}
         self.nodes_info = []
-        # When the value is modified, set the flag bit to False, then other variables are forbidden to read the
-        # restricted variables
+        # Is it being updated
+        # This value is true when the demo is updating the node information.
+        # You need to wait for this value to be False to perform other operations
         self.flush_status = False
+        # Is it allowed to update
+        # When this value is marked to True, the demo process does not update the node information while the loop waits.
+        # When the operation is performed, the value must be set to True and the value is set to False.
+        self.bool_flush = True
 
     def create_demo(self):
         """
@@ -89,12 +94,14 @@ class ConnectNode(object):
         cmd_alive_container = 'docker ps|wc -l'
         cmd_docker_image = 'docker images|wc -l'
         while self.demo_status:
-            self.flush_status = False
+            while not self.bool_flush:
+                pass
+            self.flush_status = True
             # Update node information.
             self._get_node_info()
             # Update ssh connect.
             self._create_ssh()
-            self.flush_status = True
+            self.flush_status = False
             try:
                 cluster_node_num = len(self.nodes)
                 cluster_container_num = 0
@@ -174,8 +181,12 @@ class ConnectNode(object):
         :return: (ip, status, (stdout, stderr))
         """
         if node[0] is not None and node[1] is not None:
-            _, stdout, stderr = node[1].exec_command(cmd)
-            status = 'success'
+            try:
+                _, stdout, stderr = node[1].exec_command(cmd)
+                status = 'success'
+            except Exception, e:
+                status = 'defeated'
+                stdout, stderr = None, None
         else:
             status = 'defeated'
             stdout, stderr = None, None
@@ -204,12 +215,12 @@ class ConnectNode(object):
         """
         info = []
         #
-        while not self.flush_status:
+        self.bool_flush = False
+        while self.flush_status:
             pass
-        ip_dir = self._get_ip_attr(ip, 'dir')
-        node = self._get_ip_attr(ip, 'info')
+        ip_dir = self.get_ip_attr(ip, 'dir')
+        node = self.get_ip_attr(ip, 'info')
         cmd = 'ls {ip_dir}'.format(ip_dir=ip_dir)
-        print node
         exec_result = self.cmd(node, cmd)
         if exec_result[1] == 'success':
             filess = exec_result[2][0].readlines()
@@ -220,12 +231,34 @@ class ConnectNode(object):
                 create_time = self._get_file_time(node, files)
                 file_size = self._get_file_size(node, files)
                 info.append([ids, files, create_time, file_size])
+        self.bool_flush = True
         return info
 
     def get_docker_image_list(self, ip):
         pass
 
-    def _get_ip_attr(self, ip, attr):
+    def get_ip_list(self, master=True, available=True):
+        """
+        Returns the IP list. By default, the master node is displayed and the node is not displayed
+        :param master: Does it return to the master node
+        :return:[ip1, ip2, ip3]
+        """
+        self.bool_flush = False
+        while self.flush_status:
+            pass
+        result = []
+        for ip in self.nodes:
+            if not master:
+                if ip[2][5]:
+                    continue
+            if available:
+                if ip[0] is None or ip[1] is None:
+                    continue
+            result.append(ip[2][0])
+        self.bool_flush = True
+        return result
+
+    def get_ip_attr(self, ip, attr):
         """
         Returns information about the specified IP, and None if the IP does not exist in the database.
         :param ip: str; eg:'10.42.0.74'
@@ -293,6 +326,7 @@ class ConnectNode(object):
         :return: There is no return value.
         """
         self.demo_status = False
+        self.bool_flush = True
 
     def close(self):
         """
@@ -322,6 +356,8 @@ class Event(object):
         """
         date = date.strftime('%Y-%m-%d %H:%M:%S')
         avatar = User.query.filter(User.username == username).first().avatar
+        if avatar is None:
+            avatar = url_for('static', filename='img/user1.png')
         event = EventInfo(username=username, avatar=avatar, date=date, event=event)
         db.session.add(event)
         db.session.commit()

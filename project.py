@@ -103,7 +103,7 @@ def lock():
 if __name__ == '__main__':
     init()
     try:
-        app.run(debug=True)
+        app.run(debug=True, host='0.0.0.0')
     finally:
         Tools.get_connect_node().close_demo()
         Tools.get_connect_node().close()

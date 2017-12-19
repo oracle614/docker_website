@@ -26,7 +26,7 @@ class User(db.Model):
 class Sys(db.Model):
     __tablename__ = 'sys_set'
     image_dir = db.Column(db.String(50), nullable=False, primary_key=True)
-    master_node = db.Column(db.String(), nullable=False)
+    master_node = db.Column(db.String(20), nullable=False)
 
 
 # node set table

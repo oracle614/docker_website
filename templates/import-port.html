@@ -46,12 +46,12 @@
                                         <select id="node_list" class="selectpicker form-control" multiple>
                                         </select>
                                     </div>
-                                    <div class="col-md-4"> </div>
+                                    <div class="col-md-5" id="div_space"> </div>
 {#                                    <div class="col-md-6"></div>#}
-                                    <div class="col-md-2">
-                                        <button class="btn btn-primary" type="button" id="import_button">
-                                            <i class="fa fa-spinner fa-spin" id="loading"></i>
-                                            Loading
+                                    <div class="col-md-1" id="div_button">
+                                        <button class="btn btn-primary" type="button" id="import_button" disabled="disabled">
+                                            <i class="fa fa-spinner fa-spin" id="icon_loading"></i>
+{#                                            Loading#}
                                         </button>
                                     </div>
                                 </div>
@@ -81,6 +81,7 @@
                             var option = document.createElement('option');
                             option.setAttribute('selected', true);
                             option.setAttribute('value', node_list[i]);
+                            option.setAttribute('name', 'select_node');
                             option.innerText = node_list[i];
                             $("#node_list").append(option);
                         }
@@ -98,32 +99,20 @@
                     data: JSON.stringify({'type': 'image_file_list'}),
                     dataType: 'json',
                     type: 'POST',
-{#                    timeout: 5000,#}
                     contentType: 'application/json; charset=UTF-8',
                     url: '{{ url_for('get_import_info') }}',
                     success: function (resful, status) {
                         if(status) {
                             var button = document.getElementById('import_button');
-                            button.innerHTML = '导出';
-{#                            var div1 = button.parentNode;#}
-{#                            var div2 = div1.previousSibling;#}
-{#                            div1.setAttribute('class', 'col-md-1');#}
-{#                            div2.setAttribute('class', 'col-md-5');#}
+                            button.innerText = '导入';
+                            button.removeAttribute('disabled');
                             var image_file_list = resful.image_file_list;
                             make_tar_format(image_file_list);
                         }
                     }
-{#                    error: function () {#}
-{#                        sleep(Date.now(), 2);#}
-{#                        get_image_list();#}
-{#                    }#}
                });
             });
         }
-        function sleep(t, d) {
-            while(Date.now - t <= d);
-        }
-
         /* get image file list end */
         /* make image list start */
         function make_tar_format(data) {
@@ -133,6 +122,7 @@
             *
             * */
             image_list = document.getElementById('image_file_list');
+            image_list.innerHTML = '';
             for(var i =0; i<data.length; i++) {
                 var row = document.createElement('tr');
                 for(var j=0; j<data[i].length;j++) {
@@ -143,6 +133,8 @@
                        var temp = document.createElement('td');
                        var checkbox = document.createElement('input');
                        checkbox.setAttribute("type", "checkbox");
+                       checkbox.setAttribute('name', 'import_check');
+                       checkbox.setAttribute('value', data[i][1]);
                        checkbox.checked = true;
                        temp.appendChild(checkbox);
                        row.appendChild(temp);
@@ -152,6 +144,60 @@
             }
         }
         /* make image list end */
+        /* import image file start */
+        $("#import_button").click(function () {
+            var button = document.getElementById('import_button');
+            button.setAttribute('disabled', 'disabled');
+            var icon = document.createElement('i');
+            button.innerHTML = '';
+            icon.setAttribute('class', 'fa fa-spinner fa-spin');
+            button.appendChild(icon);
+            var check_box = document.getElementsByName('import_check');
+            var select = document.getElementsByName('select_node');
+            var files_name = new Array();
+            var node_list = new Array();
+            toastr.options = {
+                               'positionClass': 'toast-top-center',
+                               'closeButton': true,
+                               'debug': false
+                            };
+            for(var i=0; i<check_box.length; i++) {
+                if(check_box[i].checked) {
+                    files_name.push(check_box[i].value);
+                }
+            }
+            for(var j=0; j<select.length; j++) {
+                if(select[j].selected) {
+                    node_list.push(select[j].value);
+                }
+            }
+            if(files_name.length === 0) {
+                toastr.error('请至少选择一个镜像文件');
+                get_image_list();
+                return;
+            }
+            if(node_list.length === 0) {
+                toastr.error('请至少选择一个节点');
+                get_image_list();
+                return;
+            }
+            $.ajax({
+                data: JSON.stringify({'type': 'submit', 'node_list': node_list, 'files_name': files_name}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_import_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        get_image_list();
+                        if(resful.import_status === 'success') {
+                            toastr.info('导入完成');
+                        }
+                    }
+                }
+            });
+        });
+        /* import image file stop */
     </script>
 {% endblock %}
 <!-- private js stop -->
