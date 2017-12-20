@@ -17,3 +17,5 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 # CSRF SET
 CSRF_ENABLED = True
 SECRET_KEY = os.urandom(24)
+
+UPLOAD_FOLDER = os.path.dirname(os.path.abspath(__file__)) + '/' + 'upload'

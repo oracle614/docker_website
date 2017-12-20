@@ -15,8 +15,9 @@
                         </div>
                     </div>
                     <div class="panel-body no-padding">
-                            <form class="dropzone dz-clickable" action="#">
-                                <div class="dz-default dz-message"><span>点击此处上传文件</span></div>
+                        <div id="upload_file"></div>
+                            <form class="dropzone dz-clickable" action="{{ url_for('import_file') }}" id="upload-file">
+                                <div class="dz-default dz-message"><span>点击此处上传文件,同名文件上传会覆盖</span></div>
                             </form>
                     </div>
                     <div class="panel-footer">
@@ -24,20 +25,17 @@
                             <form class="form-horizontal">
                                 <div class="row">
                                     <label class="control-label col-md-1">
-                                        导入节点
+                                        节点
                                     </label>
-                                    <div class="col-md-5">
-                                        <select id="usertype" class="selectpicker form-control" multiple>
-                                            <option value="0">10.42.0.74</option>
-                                            <option value="1">10.42.0.75</option>
-                                            <option value="2">10.42.0.76</option>
-                                            <option value="3">10.42.0.77</option>
-                                            <option value="4">10.42.0.78</option>
+                                    <div class="col-md-5" id="select_parent">
+                                        <select id="node_list" class="selectpicker form-control" multiple>
                                         </select>
                                     </div>
-                                    <div class="col-md-5"> </div>
-                                    <div class="col-md-1">
-                                        <button class="btn btn-primary" type="button" disabled="disabled">导入</button>
+                                    <div class="col-md-5" id="div_space"> </div>
+                                    <div class="col-md-1" id="div_button">
+                                        <button class="btn btn-primary" type="button" id="import_button" disabled="disabled">
+                                            <i class="fa fa-spinner fa-spin" id="icon_loading"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </form>
@@ -55,54 +53,157 @@
 {% block script %}
     <script src="/static/vendor/dropzone/dist/min/dropzone.min.js"></script>
     <script>
-        function get_tar_info(type) {
-            var ip = null;
-            if(type === 'main') {
-                ip = '{{ cluster_info.master_ip }}';
-            }
-            else {
-                ip = '1';
-            }
+        $(document).ready(function () {
+            /* get node list start */
             $.ajax({
-                async: false,
-                data: ip,
+                data: JSON.stringify({'type': 'node_list', 'master': true, 'available': true}),
                 dataType: 'json',
                 type: 'POST',
-                success: make_tar_format,
-                url: '{{ url_for("import_port") }}'
-            });
-        }
-        function make_tar_format(data) {
-            /*
-            * data format:
-            * master node example:{'type':'master', 'files': [(1, 'hello-world.tar', '2017-05-06 14:12:32', 'test tar file'), ]}
-            *0
-            * */
-            var data_type = data['type'];
-            var form;
-            if(data_type === 'master') {
-                form = document.getElementById('form-master');
-            }
-            else {
-                form = document.getElementById('form-node');
-            }
-            for(var i =0; i<data['files'].length; i++) {
-                var row = document.createElement('tr');
-                for(var j=0; j<data['files'][i].length;j++) {
-                   var num = document.createElement('td');
-                   num.innerText = data['files'][i][j];
-                   row.appendChild(num);
-                   if(j === data['files'][i].length - 1) {
-                       var temp = document.createElement('td');
-                       var checkbox = document.createElement('input');
-                       checkbox.setAttribute("type", "checkbox");
-                       checkbox.checked = true;
-                       temp.appendChild(checkbox);
-                       row.appendChild(temp);
-                   }
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_import_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        var node_list = resful.node_list;
+                        for(var i=0; i<node_list.length; i++) {
+                            var option = document.createElement('option');
+                            option.setAttribute('value', node_list[i]);
+                            option.setAttribute('name', 'select_node');
+                            option.setAttribute('selected', true);
+                            option.innerText = node_list[i];
+                            $("#node_list").append(option);
+                            if(i === 0)
+                                option.setAttribute('selected', true);
+                        }
+                        $("#node_list").selectpicker("refresh");
+                        var button = document.getElementById('import_button');
+                        button.innerText = '导入';
+                        button.removeAttribute('disabled');
+                    }
                 }
-                form.appendChild(row);
+            });
+            /* get node list end */
+            /* set dropzone start */
+            Dropzone.options.uploadFile = {
+                acceptedFiles: ".tar",  // only tar file
+                maxFilesize: 2 * 1024,  // 2G
+                maxFiles: 10,
+                addRemoveLinks: true,
+                init: function () {
+                    toastr.options = {
+                               'positionClass': 'toast-top-center',
+                               'closeButton': true,
+                               'debug': false
+                            };
+                    this.on('success', function (file, status) {
+                        if(status) {
+                            $.ajax({
+                                data: JSON.stringify({'type': 'add_upload_file', 'file_name': file.name}),
+                                dataType: 'json',
+                                type: 'POST',
+                                contentType: 'application/json; charset=UTF-8',
+                                url: '{{ url_for('get_import_info') }}',
+                                success: function (resful, status) {
+                                    if(resful.add_upload_file_status === 'success')
+                                        toastr.info(file.name + '上传成功');
+                                    else
+                                        toastr.error(file.name + '上传失败');
+                                }
+                            });
+                        }
+                        else
+                            toastr.error(file.name + '上传失败');
+                    });
+                    /* send remove file request start */
+                    this.on("removedfile", function(file) {
+                        $.ajax({
+                            data: JSON.stringify({'type': 'remove_upload_file', 'file_name': file.name}),
+                            dataType: 'json',
+                            type: 'POST',
+                            contentType: 'application/json; charset=UTF-8',
+                            url: '{{ url_for('get_import_info') }}',
+                            success: function (resful, status) {
+                                if(resful.remove_upload_file_status === 'success')
+                                    toastr.info(file.name + '删除成功');
+                                else
+                                    toastr.error(file.name + '删除失败');
+                            }
+                        });
+                    });
+                    /* send remove file request end */
+                }
+            };
+
+            /* set dropzone end */
+        });
+
+        // import image file from local start
+        $("#import_button").click(function () {
+            /* check node list start */
+            var select = document.getElementsByName('select_node');
+            var node_list = new Array();
+            toastr.options = {
+                               'positionClass': 'toast-top-center',
+                               'closeButton': true,
+                               'debug': false
+                            };
+            for(var j=0; j<select.length; j++) {
+                if(select[j].selected) {
+                    node_list.push(select[j].value);
+                }
             }
-        }
+            if(node_list.length === 0) {
+                toastr.error('请至少选择一个节点');
+                get_image_list();
+                return;
+            }
+            /* check node list end */
+            var upload_file = 0;
+            /* check file start */
+            $.ajax({
+                async: false,
+                data: JSON.stringify({'type': 'get_upload_file_num'}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_import_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        upload_file = resful.upload_file_num;
+                    }
+                }
+            });
+            if(upload_file === 0) {
+                toastr.error('至少上传一个镜像文件');
+                return;
+            }
+            /* check file end */
+            /* set button start */
+            var button = document.getElementById('import_button');
+            button.setAttribute('disabled', 'disabled');
+            var icon = document.createElement('i');
+            button.innerHTML = '';
+            icon.setAttribute('class', 'fa fa-spinner fa-spin');
+            button.appendChild(icon);
+            /* set nutton end */
+            /* submit request */
+            $.ajax({
+                data: JSON.stringify({'type': 'submit_local', 'node_list': node_list}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_import_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        if(resful.import_local_status === 'success') {
+                            var button = document.getElementById('import_button');
+                            button.innerText = '导入';
+                            button.removeAttribute('disabled');
+                            toastr.info('导入完成');
+                        }
+                    }
+                }
+            });
+        });
+
     </script>
 {% endblock %}
