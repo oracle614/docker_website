@@ -86,17 +86,17 @@
                             $("#node_list").append(option);
                         }
                         $("#node_list").selectpicker("refresh");
+                        get_image_list();
                     }
                 }
            });
         });
         /* get node list end */
         /* get tar file list start */
-        get_image_list();
         function get_image_list() {
             $(document).ready(function () {
                $.ajax({
-                    data: JSON.stringify({'type': 'image_file_list'}),
+                    data: JSON.stringify({'type': 'image_file_list', 'recent_time': false}),
                     dataType: 'json',
                     type: 'POST',
                     contentType: 'application/json; charset=UTF-8',

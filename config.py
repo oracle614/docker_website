@@ -18,4 +18,6 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 CSRF_ENABLED = True
 SECRET_KEY = os.urandom(24)
 
-UPLOAD_FOLDER = os.path.dirname(os.path.abspath(__file__)) + '/' + 'upload'
+UPLOAD_FOLDER = os.path.dirname(os.path.abspath('__file__')) + '/' + 'upload'
+DOWNLOAD_FOLDER = os.path.dirname(os.path.abspath('__file__')) + '/' + 'download'
+HOME_FOLDER = os.getcwd()

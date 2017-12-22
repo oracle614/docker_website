@@ -207,7 +207,7 @@ class ConnectNode(object):
             end.append((node[2][0], status, result))
         return end
 
-    def get_image_file_list(self, ip):
+    def get_image_file_list(self, ip, recent_time=False):
         """
         Gets the image file information in the specified IP node.
         :param ip: ip str,eg:10.42.0.74
@@ -230,7 +230,11 @@ class ConnectNode(object):
                 files = files.split('\n')[0]
                 create_time = self._get_file_time(node, files)
                 file_size = self._get_file_size(node, files)
-                info.append([ids, files, create_time, file_size])
+                visit_time = self._get_recent_file_time(node, files)
+                if recent_time:
+                    info.append([ids, files, create_time, visit_time, file_size])
+                else:
+                    info.append([ids, files, create_time, file_size])
         self.bool_flush = True
         return info
 
@@ -304,6 +308,21 @@ class ConnectNode(object):
         if result[1] == 'success':
             file_time = result[2][0].readlines()[0].split('\n')[0]
         return file_time
+
+    def _get_recent_file_time(self, node, filename):
+        """
+        Returns the last access date of the mirrored file under the mirror folder directory in the specified node.
+        :param node:[trans, ssh, (......)] same as self.nodes[0]
+        :param filename:file name
+        :return: file recent
+        """
+        path = node[2][4] + '/' + filename
+        cmd = 'stat {path}|grep Access |grep + |cut -d " " -f 2,3|cut -d "." -f 1'.format(path=path)
+        result = self.cmd(node, cmd)
+        file_recent_time = None
+        if result[1] == 'success':
+            file_recent_time = result[2][0].readlines()[0].split('\n')[0]
+        return file_recent_time
 
     def _get_file_size(self, node, filename):
         """

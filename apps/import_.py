@@ -64,11 +64,25 @@ def get_import_info():
         1. If the type=node_list in the json sent by ajax, the server will return the processed IP list;
         2. If the type=image_file_list in json sent by ajax, the server returns the image file list of the main node,
     which is stored in the key {image_file_list};
-        3. If type=submit in the json sent by ajax, the server will return the overall execution result of the import
+        3. If type=submit_port in the json sent by ajax, the server will return the overall execution result of the import
     request and the execution result at each node, corresponding to the key {import_status} and import_node_status,
     The server will return the image file list at the same time to build a new image file list;
-        4.
-    :return:{'node_list':[ip1, ip2,,,,], 'image_file_list': [[id, name, create_time, size],...]}
+        4. If type=add_upload_file, the server verifies that the file_name sent by ajax is present in the upload file.
+    Returns success when it exists, otherwise it returns a defeated.
+        5. If type=remove_upload_file, the server deletes the folder in the request json from the upload folder of the
+    project root directory, and if successful, the server returns success or returns the defeated.
+        6. If type=submit_local, the server will send all the files in the server root directory upload directory to
+    the node node specified in the ajax request.
+
+    :return:
+        1. Ip list. Like as [Ip1, Ip2, ...],in the 'node_list' item in the 'info' dictionary
+        2. Image file list. in the 'image_file_list' item in the 'info' dictionary. Format to 'see get_image_file_list()'
+        3. Main node import result.The overall execution is stored in the import_port_status key of the info dictionary,
+    The execution of each node is stored in the import_port_node_status key of the info dictionary, in a dictionary.
+        4. File upload status.Returns success when the checksum is successful, otherwise it returns the defeated.
+        5. File delete operation status. Successful execution of return success, responsible for returning the defeated.
+        6. local import result.The overall execution is stored in the import_local_status key of the info dictionary,
+    The execution of each node is stored in the import_local_node_status key of the info dictionary, in a dictionary.
     """
     received = request.get_json()
     info = {'node_list': [], 'image_file_list': []}
