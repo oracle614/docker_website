@@ -49,18 +49,14 @@ class EventInfo(db.Model):
     avatar = db.Column(db.String(300))
 
 
-@app.route('/head/user/', methods=['POST'])
-def get_head_user_info():
-    """
-    Gets the title bar user information
-    :return:{'username': ,'avatar': }
-    """
-    user_info = None
-    if 'username' not in session:
-        return user_info
-    temp = User.query.filter(User.username == session['username']).first()
-    user_info = {'username': temp.username, 'avatar': temp.avatar, 'role': temp.role}
-    return json.dumps(user_info)
+# message table
+class MessageInfo(db.Model):
+    __tablename__ = 'message'
+    message_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    info = db.Column(db.Text, nullable=False)
+    username = db.Column(db.String(10), db.ForeignKey('user.username'), nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
+    grade = db.Column(db.String(10), nullable=False)
 
 
 db.create_all()

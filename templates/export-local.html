@@ -63,10 +63,6 @@
             </div>
         </div>
     </div>
-    <script>
-     var select_node = null;
-     alert('test');
-    </script>
 {% endblock %}
 <!-- private js start -->
 {% block script %}
@@ -84,7 +80,7 @@
                     if(status) {
                         var node_list = resful.node_list;
                         for(var i=0; i<node_list.length; i++) {
-                            var option = document.createElement('option');
+                           var option = document.createElement('option');
                             if(i === 0) {
                                 option.setAttribute('selected', true);
                             }
@@ -191,6 +187,7 @@
                 toastr.error('请至少选择一个镜像文件');
                 return;
             }
+            toastr.info('文件打包需要一定时间,请耐心等待');
             var button = document.getElementById('export_button');
             button.setAttribute('disabled', 'disabled');
             var icon = document.createElement('i');
@@ -203,13 +200,15 @@
                 dataType: 'json',
                 type: 'POST',
                 contentType: 'application/json; charset=UTF-8',
-                url: '{{ url_for('get_export_info') }}'
+                url: '{{ url_for('get_export_info') }}',
                 success: function (resful, status) {
                     if(status) {
-{#                        if(resful.export_local_status === 'success') {#}
-{#                            get_image_list();#}
-{#                            window.location.href = {{ url_for('export_download') }};#}
-{#                        }#}
+                        if(resful.export_local_status === 'success') {
+                            var button = document.getElementById('export_button');
+                            button.innerText = '导入';
+                            button.removeAttribute('disabled');
+                            window.location.href = "{{ url_for('export_download') }}";
+                        }
                     }
                 }
             });

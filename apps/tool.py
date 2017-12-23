@@ -384,7 +384,7 @@ class Event(object):
     @staticmethod
     def get_event(num):
         """
-        Package the latest number of events
+        Package the latest number of events.
         :param num: Package the latest number of events
         :return: Events in the dictionary. format: [{'username': '',avatar': '','date': '','event_info': ''}, ......]
         """
@@ -422,6 +422,39 @@ class Event(object):
                 temp.pop('avatar')
             events_to_list.append(temp)
         return events_to_list
+
+
+class Message(object):
+    """
+    Manage the current user's message.
+    """
+    @staticmethod
+    def write_message(info, username, grade='info'):
+        """
+        Writes the message to the database.
+        :param info:
+        :param username:
+        :param grade:
+        :return:
+        """
+        date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        message = MessageInfo(info=info, username=username, grade=grade, date=date)
+        db.session.add(message)
+        db.session.commit()
+
+    @staticmethod
+    def get_message(username, num):
+        """
+        Gets the user username recently the num bar message.
+        :param username:
+        :param num:
+        :return: [{'info': ,''grade: ,'message_id': }, {}]
+        """
+        messages = MessageInfo.query.filter(MessageInfo.username == username).order_by(db.desc(MessageInfo.date)).limit(num)
+        messages_to_list = []
+        for message in messages:
+            messages_to_list.append({'info': str(message.info), 'grade': str(message.grade), 'message_id': int(message.message_id)})
+        return messages_to_list
 
 
 # Declare connect_node for other class access.

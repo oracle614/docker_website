@@ -1,11 +1,10 @@
 #!coding:utf-8
 import sys
-sys.path.append('../')
-from common import *
-from tool import Tools
-from flask import render_template, redirect, session, url_for, request
 import json
+sys.path.append('../')
+from flask import render_template
 from tool import *
+from config import EVENT_NUMBER
 
 
 @app.route('/')
@@ -24,5 +23,5 @@ def get_index_event():
     Return time dictionary information
     :return: {'events': [{'username': ,avatar': ,'date': ,'event_info':  }, ......]}
     """
-    event = {'events': Event.get_event(10)}
+    event = {'events': Event.get_event(EVENT_NUMBER)}
     return json.dumps(event)

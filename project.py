@@ -10,9 +10,50 @@ from apps.index import *
 from apps.pack import *
 from common import *
 from apps.tool import *
+from config import MESSAGE_NUMBER
 
 
-connect_node = None
+@app.route('/head/user/', methods=['POST'])
+def get_head_user_info():
+    """
+    Gets the title bar user information
+    :return:{'username': ,'avatar': }
+    """
+    user_info = None
+    if 'username' not in session:
+        return json.dumps({})
+    temp = User.query.filter(User.username == session['username']).first()
+    user_info = {'username': temp.username, 'avatar': temp.avatar, 'role': temp.role}
+    return json.dumps(user_info)
+
+
+@app.route('/head/message/', methods=['POST', 'GET'])
+def get_message_info():
+    if 'username' in session:
+        username = session['username']
+        messages = Message.get_message(username, MESSAGE_NUMBER)
+        # Message id, to identify whether there is new message.
+        messages_id = [str(message['message_id']) for message in messages]
+        messages_id.sort()
+        if 'messages_id' in session:
+            # Messages_id same as 1_3_4
+            session_messages_id = session['messages_id'].split('_')
+            session_messages_id.sort()
+            if session_messages_id == messages_id or len(messages_id) < len(session_messages_id):
+                status = 'old'
+                new_number = 0
+            else:
+                status = 'new'
+                common_number = len(set(messages_id) & set(session_messages_id))
+                new_number = len(messages_id) - common_number
+        else:
+            status = 'new'
+            new_number = len(messages_id)
+        info = {'content': messages, 'status': status, 'new_number': new_number}
+        session['messages_id'] = '_'.join(messages_id)
+    else:
+        info = {}
+    return json.dumps(info)
 
 
 @app.route('/user/')
@@ -55,6 +96,8 @@ def login():
 def logout():
     if 'username' in session:
         session.pop('username', None)
+        if 'messages_id' in session:
+            session.pop('messages_id', None)
     return redirect(url_for('login'))
 
 

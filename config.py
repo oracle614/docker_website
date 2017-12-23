@@ -21,3 +21,6 @@ SECRET_KEY = os.urandom(24)
 UPLOAD_FOLDER = os.path.dirname(os.path.abspath('__file__')) + '/' + 'upload'
 DOWNLOAD_FOLDER = os.path.dirname(os.path.abspath('__file__')) + '/' + 'download'
 HOME_FOLDER = os.getcwd()
+
+MESSAGE_NUMBER = 5
+EVENT_NUMBER = 10

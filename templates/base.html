@@ -55,16 +55,16 @@
 						<li class="dropdown">
 							<a href="#" class="dropdown-toggle icon-menu" data-toggle="dropdown">
 								<i class="lnr lnr-alarm"></i>
-								<span class="badge bg-danger">5</span>
+								<span class="badge bg-danger" id="message_number">0</span>
 							</a>
-							<ul class="dropdown-menu">
+							<ul class="dropdown-menu" id="message_box">
                                 <!-- message -->
-								<li><a href="#" class="notification-item"><span class="dot bg-warning"></span>System space is almost full</a></li>
-								<li><a href="#" class="notification-item"><span class="dot bg-danger"></span>You have 9 unfinished tasks</a></li>
-								<li><a href="#" class="notification-item"><span class="dot bg-success"></span>Monthly report is available</a></li>
-								<li><a href="#" class="notification-item"><span class="dot bg-warning"></span>Weekly meeting in 1 hour</a></li>
-								<li><a href="#" class="notification-item"><span class="dot bg-success"></span>Your request has been approved</a></li>
-								<li><a href="#" class="more">See all notifications</a></li>
+{#								<li><a class="notification-item"><span class="dot bg-warning"></span>System space is almost full</a></li>#}
+{#								<li><a class="notification-item"><span class="dot bg-danger"></span>You have 9 unfinished tasks</a></li>#}
+{#								<li><a class="notification-item"><span class="dot bg-success"></span>Monthly report is available</a></li>#}
+{#								<li><a class="notification-item"><span class="dot bg-warning"></span>Weekly meeting in 1 hour</a></li>#}
+{#								<li><a class="notification-item"><span class="dot bg-success"></span>Your request has been approved</a></li>#}
+{#								<li><a href="#" class="more">See all notifications</a></li>#}
 							</ul>
 						</li>
 						<li class="dropdown">
@@ -198,24 +198,83 @@
     {% block script %}
     {% endblock %}
 	<script>
-        $.ajax({
-            data: JSON.stringify({'test':'test'}),
-            dataType: 'json',
-            type: 'POST',
-            contentType: 'application/json; charset=UTF-8',
-            url: '{{ url_for('get_head_user_info') }}',
-            success: function (resful, status) {
-                if(status === 'success') {
-                    if(resful.avatar !== null)
-                         $("#head_user_avatar").attr('src', resful.avatar);
-                    $("#head_user_username").text(resful.username);
-                    var role = resful.role;
-                    if(role !== 'warden') {
-                        $("#sys-set-show").hide();
+        toastr.options = {
+                               'positionClass': 'toast-top-center',
+                               'closeButton': true,
+                               'debug': false
+                            };
+        get_head_info();
+        get_message_info();
+        window.setInterval(get_head_info, 10000);
+        window.setInterval(get_message_info, 10000);
+        /* get head info start */
+        function get_head_info() {
+             $.ajax({
+                data: JSON.stringify({'test':'test'}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_head_user_info') }}',
+                success: function (resful, status) {
+                    if(status === 'success') {
+                        if(resful.avatar !== null)
+                             $("#head_user_avatar").attr('src', resful.avatar);
+                        $("#head_user_username").text(resful.username);
+                        var role = resful.role;
+                        if(role !== 'warden') {
+                            $("#sys-set-show").hide();
+                       }
                    }
                }
-           }
-       });
+           });
+        }
+        /* get head info end */
+
+        /* get message start */
+        function get_message_info() {
+            $.ajax({
+               data: JSON.stringify({'test': 'test'}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_message_info') }}',
+                success: function (resful, status) {
+                    if(status === 'success') {
+                        var content = resful.content;
+                        var message_status = resful.status;
+                        var new_message_number = resful.new_number;
+                        var message_number = content.length;
+                        var span_message_number = document.getElementById('message_number');
+                        span_message_number.innerText = message_number;
+                        var message_box = document.getElementById('message_box');
+                        message_box.innerHTML = '';
+                        for(var i=0; i<message_number; i++) {
+                            var li = document.createElement('li');
+                            var a = document.createElement('a');
+                            var span1 = document.createElement('span');
+                            if(content[i].grade === 'success')
+                                span1.setAttribute('class', 'dot bg-success');
+                            else
+                                span1.setAttribute('class', 'dot bg-danger');
+                            a.setAttribute('class', 'notification-item');
+                            a.appendChild(span1);
+                            var span2 = document.createElement('span');
+                            span2.innerText = content[i].info;
+                            a.appendChild(span2);
+                            li.appendChild(a);
+                            message_box.appendChild(li);
+                        }
+                        if(message_status === 'new') {
+                            var info = '您有' + new_message_number.toString() + '条新消息';
+                            toastr.info(info);
+                        }
+                    }
+                }
+            });
+        }
+        /* get message end */
+
+
         function refresh_success() {
             toastr.options = {
                 closeButton: true,

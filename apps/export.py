@@ -21,7 +21,6 @@ def export_image():
         os.makedirs(DOWNLOAD_FOLDER)
     if os.path.exists(HOME_FOLDER + '/Download.tar'):
         os.remove(HOME_FOLDER + '/Download.tar')
-    print 'whar'
     return render_template('export-local.html')
 
 
