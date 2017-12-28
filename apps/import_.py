@@ -5,14 +5,20 @@ import datetime
 import werkzeug
 import os
 import shutil
+import threading
+reload(sys)
+sys.setdefaultencoding('utf8')
 sys.path.append('../')
-from common import *
+from base import *
 from tool import Tools
 from flask import render_template, redirect, session, url_for, request
 from tool import Event
+from tool import Message
 
 
 ALLOWED_EXTENSIONS = set(['tar'])
+thread_import_port_running = None
+thread_import_local_running = None
 
 
 @app.route('/import/port/')
@@ -61,7 +67,7 @@ def allowed_file(filename):
 @app.route('/import/info/', methods=['POST'])
 def get_import_info():
     """
-        1. If the type=node_list in the json sent by ajax, the server will return the processed IP list;
+        # 1. If the type=node_list in the json sent by ajax, the server will return the processed IP list;
         2. If the type=image_file_list in json sent by ajax, the server returns the image file list of the main node,
     which is stored in the key {image_file_list};
         3. If type=submit_port in the json sent by ajax, the server will return the overall execution result of the import
@@ -75,7 +81,7 @@ def get_import_info():
     the node node specified in the ajax request.
 
     :return:
-        1. Ip list. Like as [Ip1, Ip2, ...],in the 'node_list' item in the 'info' dictionary
+        # 1. Ip list. Like as [Ip1, Ip2, ...],in the 'node_list' item in the 'info' dictionary
         2. Image file list. in the 'image_file_list' item in the 'info' dictionary. Format to 'see get_image_file_list()'
         3. Main node import result.The overall execution is stored in the import_port_status key of the info dictionary,
     The execution of each node is stored in the import_port_node_status key of the info dictionary, in a dictionary.
@@ -84,38 +90,37 @@ def get_import_info():
         6. local import result.The overall execution is stored in the import_local_status key of the info dictionary,
     The execution of each node is stored in the import_local_node_status key of the info dictionary, in a dictionary.
     """
+    global thread_import_local_running, thread_import_port_running
     received = request.get_json()
     info = {'node_list': [], 'image_file_list': []}
     master_node_ip = Sys.query.filter().first().master_node
-    if received.get('type') == 'node_list':
-        # Get all node
-        if 'username' in session:
-            user_role = User.query.filter(User.username == session.get('username')).first().role
-            # Only when the current user's role is warden, the IP address of the master node will be displayed in the
-            # previous section.
-            if user_role == 'warden' and received.get('master'):
-                info['node_list'] = Tools.get_connect_node().get_ip_list(master=True)
-            else:
-                info['node_list'] = Tools.get_connect_node().get_ip_list(master=False)
+    # if received.get('type') == 'node_list':
+    #     # Get all node
+    #     if 'username' in session:
+    #         user_role = User.query.filter(User.username == session.get('username')).first().role
+    #         # Only when the current user's role is warden, the IP address of the master node will be displayed in the
+    #         # previous section.
+    #         if user_role == 'warden' and received.get('master'):
+    #             info['node_list'] = Tools.get_connect_node().get_ip_list(master=True)
+    #         else:
+    #             info['node_list'] = Tools.get_connect_node().get_ip_list(master=False)
     # Get image file list
-    elif received.get('type') == 'image_file_list':
+    if received.get('type') == 'image_file_list':
         info['image_file_list'] = Tools.get_connect_node().get_image_file_list(master_node_ip)
     # Import image file from master node
     elif received.get('type') == 'submit_port':
         node_list = received.get('node_list')
         files_name = received.get('files_name')
         info['image_file_list'] = Tools.get_connect_node().get_image_file_list(master_node_ip)
-        exec_status = import_image_file('port', node_list, files_name)
-        if 'defeated' in exec_status:
-            info['import_port_status'] = 'defeated'
-        else:
+        if not check_thread_busy('port'):
+            thread_import_port_running = threading.Thread(target=import_image_file,
+                                                          args=('port', node_list, files_name, session['username']),
+                                                          name='thread-import-port')
+            thread_import_port_running.setDaemon(True)
+            thread_import_port_running.start()
             info['import_port_status'] = 'success'
-        temp = {}
-        for index in xrange(len(node_list)):
-            temp[node_list[index]] = exec_status[index]
-        info['import_port_node_status'] = temp
-        Event.write_event(session.get('username'), '从主节点导入了 {number_file} 个镜像文件到 {number_node} 个节点'.format(
-            number_file=len(files_name), number_node=len(node_list)), datetime.datetime.now())
+        else:
+            info['import_port_status'] = 'busy'
     # Get add status
     elif received.get('type') == 'add_upload_file':
         file_name = received.get('file_name')
@@ -135,37 +140,39 @@ def get_import_info():
     elif received.get('type') == 'submit_local':
         node_list = received.get('node_list')
         files_name = os.listdir(app.config['UPLOAD_FOLDER'])
-        exec_status = import_image_file('local', node_list, files_name)
-        if 'defeated' in exec_status:
-            info['import_local_status'] = 'defeated'
-        else:
+        if not check_thread_busy('local'):
+            thread_import_local_running = threading.Thread(target=import_image_file,
+                                                           args=('local', node_list, files_name, session['username']),
+                                                           name='thread-import-local')
+            thread_import_local_running.setDaemon(True)
+            thread_import_local_running.start()
             info['import_local_status'] = 'success'
-        temp = {}
-        for index in xrange(len(node_list)):
-            temp[node_list[index]] = exec_status[index]
-        info['import_node_status'] = temp
-        Event.write_event(session.get('username'), '从本地导入了 {number_file} 个镜像文件到 {number_node} 个节点'.format(
-            number_file=len(files_name), number_node=len(node_list)), datetime.datetime.now())
+        else:
+            info['import_local_status'] = 'busy'
     else:
         pass
     return json.dumps(info)
 
 
-def import_image_file(type, node_ip_list, files_name):
+def import_image_file(import_type, node_ip_list, files_name, username):
     """
     Sends the specified file to the specified IP and returns the execution in each node.
     :param node_ip_list: The node IP list to be sent, such as [10.42.0.41, ...]
-    :param type: The request type.Value as 'port' or 'local'
+    :param import_type: The request type.Value as 'port' or 'local'
     :param files_name: File name list
     :return: The execution of each node, such as ['success', 'defeated']
     """
+    if import_type == 'port':
+        Message.write_message('主节点镜像开始导入', username)
+    else:
+        Message.write_message('本地镜像开始导入', username)
     connect_node = Tools.get_connect_node()
     connect_node.bool_flush = False
     while connect_node.flush_status:
         pass
     master_ip = Sys.query.filter().first().master_node
     master_ip_info = connect_node.get_ip_attr(master_ip, 'info')
-    if type == 'port':
+    if import_type == 'port':
         sou_path = connect_node.get_ip_attr(master_ip, 'dir')
     else:
         sou_path = app.config['UPLOAD_FOLDER']
@@ -181,9 +188,25 @@ def import_image_file(type, node_ip_list, files_name):
                                            node_username=node_username, node_ip_path=node_ip_path, node_ip=node)
             result = connect_node.cmd(master_ip_info, cmd)
             exec_status.append(result[1])
-            print cmd
     connect_node.bool_flush = True
-    return exec_status
+    if 'defeated' in exec_status:
+        grade = 'danger'
+    else:
+        grade = 'success'
+    if import_type == 'port':
+        if grade == 'success':
+            Message.write_message('主节点镜像导入成功', username)
+            Event.write_event(username, '从主节点导入了 {number_file} 个镜像文件到 {number_node} 个节点'.format(
+                number_file=len(files_name), number_node=len(node_ip_list)), datetime.datetime.now())
+        else:
+            Message.write_message('主节点镜像导入失败', username, grade=grade)
+    else:
+        if grade == 'success':
+            Message.write_message('本地镜像导入成功', username)
+            Event.write_event(username, '从本地导入了 {number_file} 个镜像文件到 {number_node} 个节点'.format(
+                number_file=len(files_name), number_node=len(node_ip_list)), datetime.datetime.now())
+        else:
+            Message.write_message('本次镜像导入失败', username, grade=grade)
 
 
 def remove_upload_file(file_name):
@@ -198,3 +221,31 @@ def remove_upload_file(file_name):
         os.remove(file_path)
         return 'success'
     return 'defeated'
+
+
+def check_thread_busy(check_type):
+    """
+    Check thread status
+    :param check_type: 'port' or 'local'
+    :return: Busy status: True or False
+    """
+    global thread_import_port_running, thread_import_local_running
+    if check_type == 'port':
+        if thread_import_port_running is not None:
+            if not thread_import_port_running.isAlive():
+                thread_import_port_running = None
+                busy_status = False
+            else:
+                busy_status = True
+        else:
+            busy_status = False
+    else:
+        if thread_import_local_running is not None:
+            if not thread_import_local_running.isAlive():
+                thread_import_local_running = None
+                busy_status = False
+            else:
+                busy_status = True
+        else:
+            busy_status = False
+    return busy_status

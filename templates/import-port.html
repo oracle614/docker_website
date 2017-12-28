@@ -73,7 +73,7 @@
                 dataType: 'json',
                 type: 'POST',
                 contentType: 'application/json; charset=UTF-8',
-                url: '{{ url_for('get_import_info') }}',
+                url: '{{ url_for('get_common_info') }}',
                 success: function (resful, status) {
                     if(status) {
                         var node_list = resful.node_list;
@@ -191,7 +191,10 @@
                     if(status) {
                         get_image_list();
                         if(resful.import_port_status === 'success') {
-                            toastr.info('导入完成');
+                            toastr.info('请求已提交,请关注顶端消息通知');
+                        }
+                        else {
+                            toastr.info('上一次请求未完成,请关注消息通知');
                         }
                     }
                 }

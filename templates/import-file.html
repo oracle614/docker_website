@@ -60,7 +60,7 @@
                 dataType: 'json',
                 type: 'POST',
                 contentType: 'application/json; charset=UTF-8',
-                url: '{{ url_for('get_import_info') }}',
+                url: '{{ url_for('get_common_info') }}',
                 success: function (resful, status) {
                     if(status) {
                         var node_list = resful.node_list;
@@ -197,7 +197,12 @@
                             var button = document.getElementById('import_button');
                             button.innerText = '导入';
                             button.removeAttribute('disabled');
-                            toastr.info('导入完成');
+                            if(resful.import_local_status === 'success') {
+                                toastr.info('请求已提交,请关注顶端消息通知');
+                            }
+                            else {
+                                toastr.info('上一次请求未完成,请关注顶端消息通知');
+                            }
                         }
                     }
                 }

@@ -1,3 +1,6 @@
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
 from flask import render_template, url_for, redirect, request, session, flash
 from apps.tool import ConnectNode
 from apps.tool import Event
@@ -8,8 +11,9 @@ from apps.rm import *
 from apps.show import *
 from apps.index import *
 from apps.pack import *
-from common import *
+from base import *
 from apps.tool import *
+from apps.common import *
 from config import MESSAGE_NUMBER
 
 
@@ -17,7 +21,7 @@ from config import MESSAGE_NUMBER
 def get_head_user_info():
     """
     Gets the title bar user information
-    :return:{'username': ,'avatar': }
+    :return:{'username': '','avatar': ''}
     """
     user_info = None
     if 'username' not in session:
@@ -29,6 +33,13 @@ def get_head_user_info():
 
 @app.route('/head/message/', methods=['POST', 'GET'])
 def get_message_info():
+    """
+    Response to front-end message requests.
+    content: Message content;
+    status: The message is new or old;
+    new_number: Number of new messages.
+    :return: If login:{'content': '', 'status': '', 'new_number': ''}; else: {}
+    """
     if 'username' in session:
         username = session['username']
         messages = Message.get_message(username, MESSAGE_NUMBER)
@@ -47,8 +58,12 @@ def get_message_info():
                 common_number = len(set(messages_id) & set(session_messages_id))
                 new_number = len(messages_id) - common_number
         else:
-            status = 'new'
-            new_number = len(messages_id)
+            if len(messages_id) != 0:
+                status = 'new'
+                new_number = len(messages_id)
+            else:
+                status = 'old'
+                new_number = 0
         info = {'content': messages, 'status': status, 'new_number': new_number}
         session['messages_id'] = '_'.join(messages_id)
     else:
@@ -69,9 +84,13 @@ def sys_set():
 # login function
 @app.route('/login/', methods=['GET', 'POST'])
 def login():
+    """
+    Handle login requests.
+    :return: Flask response.
+    """
     if request.method == 'GET':
         if 'username' not in session:
-            return render_template('page-login.html')
+            return render_template('page-login.html', login_err=False)
         elif 'lock_stat' in session:
             return redirect(url_for('lock'))
         else:
@@ -88,12 +107,17 @@ def login():
         else:
             error = 'user is not found'
     flash(error)
-    return redirect(url_for('login'))
+    # return redirect(url_for('login'))
+    return render_template('page-login.html', login_err=True, username=request.form['username'])
 
 
 # logout function
 @app.route('/logout/')
 def logout():
+    """
+    Handle logout requests.
+    :return: Flask response.
+    """
     if 'username' in session:
         session.pop('username', None)
         if 'messages_id' in session:
@@ -103,6 +127,10 @@ def logout():
 
 @app.route('/lockscreen/', methods=['GET', 'POST'])
 def lock():
+    """
+    Handle lock requests.
+    :return: Flask requests.
+    """
     if request.method == 'GET':
         session['lock_stat'] = True
         if 'username' in session:

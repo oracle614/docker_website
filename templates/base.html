@@ -50,10 +50,10 @@
 				<div id="navbar-menu">
 					<ul class="nav navbar-nav navbar-right">
                         <li class="dropdown">
-                            <a href={{ request.url }} class="dropdown-toggle"><i class="lnr lnr-sync"></i> <span>Refresh</span></a>
+                            <a href="{{ request.url }}" class="dropdown-toggle"><i class="lnr lnr-sync"></i> <span>Refresh</span></a>
                         </li>
 						<li class="dropdown">
-							<a href="#" class="dropdown-toggle icon-menu" data-toggle="dropdown">
+							<a href="#" class="dropdown-toggle icon-menu" data-toggle="dropdown" onclick="$('#message_number').hide()">
 								<i class="lnr lnr-alarm"></i>
 								<span class="badge bg-danger" id="message_number">0</span>
 							</a>
@@ -245,7 +245,7 @@
                         var new_message_number = resful.new_number;
                         var message_number = content.length;
                         var span_message_number = document.getElementById('message_number');
-                        span_message_number.innerText = message_number;
+                        span_message_number.innerText = new_message_number;
                         var message_box = document.getElementById('message_box');
                         message_box.innerHTML = '';
                         for(var i=0; i<message_number; i++) {
@@ -263,6 +263,12 @@
                             a.appendChild(span2);
                             li.appendChild(a);
                             message_box.appendChild(li);
+                        }
+                        if(message_number === 0 || new_message_number === 0) {
+                            $("#message_number").hide();
+                        }
+                        else {
+                            $("#message_number").show();
                         }
                         if(message_status === 'new') {
                             var info = '您有' + new_message_number.toString() + '条新消息';

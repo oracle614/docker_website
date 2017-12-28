@@ -1,8 +1,10 @@
 # coding=utf-8
 import paramiko
 import os, threading, datetime, logging, time, sys
+reload(sys)
+sys.setdefaultencoding('utf8')
 sys.path.append('../')
-from common import *
+from base import *
 from flask import session, redirect, url_for
 
 
@@ -211,7 +213,7 @@ class ConnectNode(object):
         """
         Gets the image file information in the specified IP node.
         :param ip: ip str,eg:10.42.0.74
-        :return:[[id, filename, create_time, file_size],...]
+        :return:[[id, filename, create_time[,change_time], file_size],...]
         """
         info = []
         #
@@ -228,11 +230,11 @@ class ConnectNode(object):
             for files in filess:
                 ids += 1
                 files = files.split('\n')[0]
-                create_time = self._get_file_time(node, files)
+                change_time = self._get_change_file_time(node, files)
                 file_size = self._get_file_size(node, files)
-                visit_time = self._get_recent_file_time(node, files)
+                create_time = self._get_create_file_time(node, files)
                 if recent_time:
-                    info.append([ids, files, create_time, visit_time, file_size])
+                    info.append([ids, files, create_time, change_time, file_size])
                 else:
                     info.append([ids, files, create_time, file_size])
         self.bool_flush = True
@@ -294,9 +296,9 @@ class ConnectNode(object):
         else:
             return None
 
-    def _get_file_time(self, node, filename):
+    def _get_change_file_time(self, node, filename):
         """
-        Returns the creation date of the specified file under the mirror folder directory in the specified node.
+        Returns the change date of the specified file under the mirror folder directory in the specified node.
         :param node: [trans, ssh, (......)] same as self.nodes[0]
         :param filename: file name
         :return: file_time(str)
@@ -309,9 +311,9 @@ class ConnectNode(object):
             file_time = result[2][0].readlines()[0].split('\n')[0]
         return file_time
 
-    def _get_recent_file_time(self, node, filename):
+    def _get_create_file_time(self, node, filename):
         """
-        Returns the last access date of the mirrored file under the mirror folder directory in the specified node.
+        Returns the create date of the mirrored file under the mirror folder directory in the specified node.
         :param node:[trans, ssh, (......)] same as self.nodes[0]
         :param filename:file name
         :return: file recent
@@ -429,15 +431,16 @@ class Message(object):
     Manage the current user's message.
     """
     @staticmethod
-    def write_message(info, username, grade='info'):
+    def write_message(info, username, grade='success'):
         """
         Writes the message to the database.
         :param info:
         :param username:
-        :param grade:
+        :param grade: success or danger
         :return:
         """
         date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        info = datetime.datetime.now().strftime('%H:%M:%S') + ': ' + info
         message = MessageInfo(info=info, username=username, grade=grade, date=date)
         db.session.add(message)
         db.session.commit()
@@ -453,7 +456,7 @@ class Message(object):
         messages = MessageInfo.query.filter(MessageInfo.username == username).order_by(db.desc(MessageInfo.date)).limit(num)
         messages_to_list = []
         for message in messages:
-            messages_to_list.append({'info': str(message.info), 'grade': str(message.grade), 'message_id': int(message.message_id)})
+            messages_to_list.append({'info': message.info, 'grade': message.grade, 'message_id': int(message.message_id)})
         return messages_to_list
 
 

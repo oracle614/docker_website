@@ -75,7 +75,7 @@
                 dataType: 'json',
                 type: 'POST',
                 contentType: 'application/json; charset=UTF-8',
-                url: '{{ url_for('get_export_info') }}',
+                url: '{{ url_for('get_common_info') }}',
                 success: function (resful, status) {
                     if(status) {
                         var node_list = resful.node_list;
@@ -125,7 +125,7 @@
                     dataType: 'json',
                     type: 'POST',
                     contentType: 'application/json; charset=UTF-8',
-                    url: '{{ url_for('get_export_info') }}',
+                    url: '{{ url_for('get_common_info') }}',
                     success: function (resful, status) {
                         if(status) {
                             var button = document.getElementById('export_button');
@@ -187,7 +187,6 @@
                 toastr.error('请至少选择一个镜像文件');
                 return;
             }
-            toastr.info('文件打包需要一定时间,请耐心等待');
             var button = document.getElementById('export_button');
             button.setAttribute('disabled', 'disabled');
             var icon = document.createElement('i');
@@ -207,7 +206,29 @@
                             var button = document.getElementById('export_button');
                             button.innerText = '导入';
                             button.removeAttribute('disabled');
-                            window.location.href = "{{ url_for('export_download') }}";
+                            toastr.info('请求已提交,请关注顶端消息通知');
+                            var time = window.setInterval(function () {
+                                $.ajax({
+                                    data: JSON.stringify({'type': 'download'}),
+                                    dataType: 'json',
+                                    type: 'POST',
+                                    contentType: 'application/json; charset=UTF-8',
+                                    url: '{{ url_for('get_export_info') }}',
+                                    success: function (resful, status) {
+                                        if(resful.download_status) {
+                                            window.location.href = "{{ url_for('export_download') }}";
+                                            window.clearInterval(time);
+                                        }
+                                    }
+                                });
+                            }, 5000);
+
+                        }
+                        else {
+                            toastr.info('上一次请求未完成,请关注顶端消息通知');
+                            var button = document.getElementById('export_button');
+                            button.innerText = '导入';
+                            button.removeAttribute('disabled');
                         }
                     }
                 }
