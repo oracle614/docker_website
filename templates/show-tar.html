@@ -23,11 +23,11 @@
                                 <th>文件编号</th>
                                 <th>镜像文件名</th>
                                 <th>创建时间</th>
-                                <th>最近使用</th>
-                                <th>备注</th>
+                                <th>访问时间</th>
+                                <th>大小</th>
                             </tr>
                             </thead>
-                            <tbody id="form-master">
+                            <tbody id="image_file_list">
                             </tbody>
                         </table>
                         </form>
@@ -42,24 +42,18 @@
                                     <label class="control-label col-md-1">
                                         节点
                                     </label>
-                                    <div class="col-md-5">
-                                        <select id="usertype" class="selectpicker form-control">
-                                            <option value="0">10.42.0.74</option>
-                                            <option value="1">10.42.0.75</option>
-                                            <option value="2">10.42.0.76</option>
-                                            <option value="3">10.42.0.77</option>
-                                            <option value="4">10.42.0.78</option>
+                                    <div class="col-md-5" id="select_parent">
+                                        <select id="node_list" class="selectpicker form-control" onchange="change_node(this)">
                                         </select>
                                     </div>
-                                    <div class="col-md-2"></div>
-                                    <!--
-                                    <div class="col-md-2">
-                                         <button class="btn btn-primary" type="button">打包至文件夹</button>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <button class="btn btn-primary" type="button">打包至本地</button>
-                                    </div>
-                                    -->
+                                    <div class="col-md-5" id="div_space"> </div>
+{#                                    <div class="col-md-6"></div>#}
+{#                                    <div class="col-md-1" id="div_button">#}
+{#                                        <button class="btn btn-primary" type="button" id="load_button" disabled="disabled">#}
+{#                                            <i class="fa fa-spinner fa-spin" id="icon_loading"></i>#}
+{#                                            Loading#}
+{#                                        </button>#}
+{#                                    </div>#}
                                 </div>
                             </form>
                         </div>
@@ -71,59 +65,113 @@
 {% endblock %}
 {% block script %}
     <script>
-{#        $(window).on('load', function () {#}
-{#            $('#usertype').selectpicker({#}
-{#            'countSelectedText': 2#}
-{#            });#}
-{#        });#}
-        function get_tar_info(type) {
-            var ip = null;
-            if(type === 'main') {
-                ip = '{{ cluster_info.master_ip }}';
-            }
-            else {
-                ip = '1';
-            }
-            $.ajax({
-                async: false,
-                data: ip,
+        toastr.options = {
+                               'positionClass': 'toast-top-center',
+                               'closeButton': true,
+                               'debug': false
+                            };
+        /* get node list start */
+        $(document).ready(function () {
+           $.ajax({
+                data: JSON.stringify({'type': 'node_list', 'master': true, 'available': true}),
                 dataType: 'json',
                 type: 'POST',
-                success: make_tar_format,
-                url: '{{ url_for("import_port") }}'
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_common_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        var node_list = resful.node_list;
+                        for(var i=0; i<node_list.length; i++) {
+                           var option = document.createElement('option');
+                            if(i === 0) {
+                                option.setAttribute('selected', true);
+                            }
+                            option.setAttribute('value', node_list[i]);
+                            option.setAttribute('name', 'select_node');
+                            option.innerText = node_list[i];
+                            $("#node_list").append(option);
+                        }
+                        $("#node_list").selectpicker("refresh");
+                        get_selected_node();
+                        get_image_list();
+                    }
+                }
+           });
+        });
+        /* get node list end */
+        function get_selected_node() {
+            var select = document.getElementsByName('select_node');
+            for(var j=0; j<select.length; j++) {
+                if(select[j].selected) {
+                    select_node = select[j].value;
+                }
+            }
+        }
+        /* Change option to execute */
+        function change_node(obj) {
+            var value = obj.options[obj.selectedIndex].value;
+            select_node = value;
+{#            var button = document.getElementById('export_button');#}
+{#            button.setAttribute('disabled', 'disabled');#}
+{#            var icon = document.createElement('i');#}
+{#            button.innerHTML = '';#}
+{#            icon.setAttribute('class', 'fa fa-spinner fa-spin');#}
+{#            button.appendChild(icon);#}
+            get_image_list();
+        }
+        /* get tar file list start */
+        function get_image_list() {
+            toastr.info('获取镜像文件列表中,清稍候');
+            $(document).ready(function () {
+               $.ajax({
+                    data: JSON.stringify({'type': 'image_file_list', 'node': select_node, 'recent_time': true}),
+                    dataType: 'json',
+                    type: 'POST',
+                    contentType: 'application/json; charset=UTF-8',
+                    url: '{{ url_for('get_common_info') }}',
+                    success: function (resful, status) {
+                        if(status) {
+{#                            var button = document.getElementById('export_button');#}
+{#                            button.innerText = '导入';#}
+{#                            button.removeAttribute('disabled');#}
+                            var image_file_list = resful.image_file_list;
+                            make_tar_format(image_file_list);
+                        }
+                    }
+               });
             });
         }
+        /* get image file list end */
+        /* make image list start */
         function make_tar_format(data) {
             /*
             * data format:
-            * master node example:{'type':'master', 'files': [(1, 'hello-world.tar', '2017-05-06 14:12:32', 'test tar file'), ]}
-            *0
+            * example:[[id, file_name, create_time, recent_time, size], ...]
+            *
             * */
-            var data_type = data['type'];
-            var form;
-            if(data_type === 'master') {
-                form = document.getElementById('form-master');
-            }
-            else {
-                form = document.getElementById('form-node');
-            }
-            for(var i =0; i<data['files'].length; i++) {
+            image_list = document.getElementById('image_file_list');
+            image_list.innerHTML = '';
+            for(var i =0; i<data.length; i++) {
                 var row = document.createElement('tr');
-                for(var j=0; j<data['files'][i].length;j++) {
+                for(var j=0; j<data[i].length;j++) {
                    var num = document.createElement('td');
-                   num.innerText = data['files'][i][j];
+                   num.innerText = data[i][j];
                    row.appendChild(num);
-                   if(j === data['files'][i].length - 1) {
-                       var temp = document.createElement('td');
-                       var checkbox = document.createElement('input');
-                       checkbox.setAttribute("type", "checkbox");
-                       checkbox.checked = true;
-                       temp.appendChild(checkbox);
-                       row.appendChild(temp);
-                   }
+{#                   if(j === data[i].length - 1) {#}
+{#                       var temp = document.createElement('td');#}
+{#                       var checkbox = document.createElement('input');#}
+{#                       checkbox.setAttribute("type", "checkbox");#}
+{#                       checkbox.setAttribute('name', 'export_check');#}
+{#                       checkbox.setAttribute('value', data[i][1]);#}
+{#                       checkbox.checked = true;#}
+{#                       temp.appendChild(checkbox);#}
+{#                       row.appendChild(temp);#}
+{#                   }#}
                 }
-                form.appendChild(row);
+                image_list.appendChild(row);
             }
+            toastr.info('镜像文件列表获取成功');
         }
+        /* make image list end */
     </script>
 {% endblock %}

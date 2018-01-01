@@ -1,6 +1,7 @@
 # coding=utf-8
 import paramiko
 import os, threading, datetime, logging, time, sys
+import re
 reload(sys)
 sys.setdefaultencoding('utf8')
 sys.path.append('../')
@@ -241,7 +242,36 @@ class ConnectNode(object):
         return info
 
     def get_docker_image_list(self, ip):
-        pass
+        """
+        Get the docker mirror list.
+        :param ip: ip str,eg:10.42.0.74
+        :return: [[Id, image_name, imageId, created, size， tag]]
+        """
+        info = []
+        self.bool_flush = False
+        while self.flush_status:
+            pass
+        node = self.get_ip_attr(ip, 'info')
+        cmd = 'docker images |grep -v TAG'
+        exec_result = self.cmd(node, cmd)
+        pattern = r'(\S+)\s*(\S+)\s*(\S+)\s*(\d+ \S+ \S+)\s+(.*)'
+        com = re.compile(pattern)
+        if exec_result[1] == 'success':
+            imagess = exec_result[2][0].readlines()
+            ids = 0
+            for images in imagess:
+                ids += 1
+                images = images.split('\n')[0]
+                re_result = re.match(com, images)
+                image_name = re_result.group(1)
+                tag = re_result.group(2)
+                image_id = re_result.group(3)
+                created = re_result.group(4)
+                size = re_result.group(5)
+                info.append([ids, image_name, image_id, created, size, tag])
+        print info
+        self.bool_flush = True
+        return info
 
     def get_ip_list(self, master=True, available=True):
         """

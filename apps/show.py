@@ -8,15 +8,17 @@ import json
 
 @app.route('/show/file/', methods=['GET', 'POST'])
 def show_file():
-    cluster_info = {
-        'master_ip': '10.42.0.74'
-    }
-    return render_template('show-tar.html', cluster_info=cluster_info)
+    if 'username' not in session:
+        return render_template('page-login.html')
+    elif 'lock_stat' in session:
+        return redirect(url_for('lock'))
+    return render_template('show-tar.html')
 
 
 @app.route('/show/image/', methods=['GET', 'POST'])
 def show_image():
-    cluster_info = {
-        'master_ip': '10.42.0.74'
-    }
-    return render_template('show-image.html', cluster_info=cluster_info)
+    if 'username' not in session:
+        return render_template('page-login.html')
+    elif 'lock_stat' in session:
+        return redirect(url_for('lock'))
+    return render_template('show-image.html')

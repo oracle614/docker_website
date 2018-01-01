@@ -28,4 +28,8 @@ def get_common_info():
             recent_time = received.get('recent_time')
             node = received.get('node')
             info['image_file_list'] = Tools.get_connect_node().get_image_file_list(node, recent_time=recent_time)
+    elif received.get('type') == 'image_docker_list':
+        if 'username' in session:
+            node = received.get('node')
+            info['image_docker_list'] = Tools.get_connect_node().get_docker_image_list(node)
     return json.dumps(info)
