@@ -9,7 +9,7 @@
                 <br>
                 <div class="panel panel-scrolling">
                     <div class="panel-heading">
-                        <h3 class="panel-title">节点Docker镜像</h3>
+                        <h3 class="panel-title">删除Docker镜像</h3>
                         <div class="right">
                             <button type="button" class="btn-toggle-collapse"><i class="lnr lnr-chevron-up"></i></button>
                             <button type="button" class="btn-remove"><i class="lnr lnr-cross"></i></button>
@@ -17,20 +17,22 @@
                     </div>
                     <div class="panel-body no-padding">
                         <form action="#" method="post">
-                        <table class="table table-condensed">
-                            <thead>
-                            <tr>
-                                <th>镜像编号</th>
-                                <th>镜像文件名</th>
-                                <th>镜像ID</th>
-                                <th>镜像版本</th>
-                                <th>备注</th>
-                                <th>选择</th>
-                            </tr>
-                            </thead>
-                            <tbody id="form-master">
-                            </tbody>
-                        </table>
+                            <table class="table table-condensed">
+                                <thead>
+                                    <tr>
+                                        <th>镜像编号</th>
+                                        <th>镜像名</th>
+                                        <th>镜像ID</th>
+                                        <th>创建时间</th>
+                                        <th>大小</th>
+                                        <th>版本</th>
+                                        <th>状态</th>
+                                        <th>删除</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="docker_image_list">
+                                </tbody>
+                            </table>
                         </form>
                     </div>
                     <div class="panel-footer">
@@ -44,18 +46,20 @@
                                         节点
                                     </label>
                                     <div class="col-md-5">
-                                        <select id="usertype" class="selectpicker form-control">
-                                            <option value="0">10.42.0.74</option>
-                                            <option value="1">10.42.0.75</option>
-                                            <option value="2">10.42.0.76</option>
-                                            <option value="3">10.42.0.77</option>
-                                            <option value="4">10.42.0.78</option>
+                                        <select id="node_list" class="selectpicker form-control" onchange="change_node(this)">
                                         </select>
                                     </div>
                                     <div class="col-md-5"></div>
-
+{#                                    <div class="col-md-1">#}
+{#                                         <button class="btn btn-primary" type="button" id="pack_port_button" disabled="disabled">#}
+{#                                            <i class="fa fa-spinner fa-spin" id="icon_loading"></i>#}
+{#                                         </button>#}
+{#                                    </div>#}
+{#                                    <div class="col-md-1"></div>#}
                                     <div class="col-md-1">
-                                         <button class="btn btn-primary" type="button">删除</button>
+                                        <button class="btn btn-primary" type="button" id="rm_image_button" disabled="disabled">
+                                            <i class="fa fa-spinner fa-spin" id="icon_loading"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </form>
@@ -68,59 +72,198 @@
 {% endblock %}
 {% block script %}
     <script>
-{#        $(window).on('load', function () {#}
-{#            $('#usertype').selectpicker({#}
-{#            'countSelectedText': 2#}
-{#            });#}
-{#        });#}
-        function get_tar_info(type) {
-            var ip = null;
-            if(type === 'main') {
-                ip = '{{ cluster_info.master_ip }}';
-            }
-            else {
-                ip = '1';
-            }
-            $.ajax({
-                async: false,
-                data: ip,
+        var select_node = null;
+        /* get node list start */
+        $(document).ready(function () {
+           $.ajax({
+                data: JSON.stringify({'type': 'node_list', 'master': true, 'available': true}),
                 dataType: 'json',
                 type: 'POST',
-                success: make_tar_format,
-                url: '{{ url_for("import_port") }}'
+                contentType: 'application/json; charset=UTF-8',
+                cache: false,
+                async: false,
+                url: '{{ url_for('get_common_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        var node_list = resful.node_list;
+                        for(var i=0; i<node_list.length; i++) {
+                           var option = document.createElement('option');
+                            if(i === 0) {
+                                option.setAttribute('selected', true);
+                            }
+                            option.setAttribute('value', node_list[i]);
+                            option.setAttribute('name', 'select_node');
+                            option.innerText = node_list[i];
+                            $("#node_list").append(option);
+                        }
+                        $("#node_list").selectpicker("refresh");
+                        get_selected_node();
+                        get_image_list();
+                    }
+                }
+           });
+        });
+        /* get node list end */
+
+        function get_selected_node() {
+            var select = document.getElementsByName('select_node');
+            for(var j=0; j<select.length; j++) {
+                if(select[j].selected) {
+                    select_node = select[j].value;
+                }
+            }
+        }
+        /* Change option to execute */
+        function change_node(obj) {
+            var select_value = obj.options[obj.selectedIndex].value;
+            select_node = select_value;
+            change_button('loading');
+            get_image_list();
+        }
+        /* get tar file list start */
+        function get_image_list() {
+            toastr.info('获取Docker镜像列表中,清稍候');
+            $(document).ready(function () {
+               $.ajax({
+                    // status 表示返回是否有容器占用该镜像
+                    data: JSON.stringify({'type': 'image_docker_list', 'node': select_node, 'status': true}),
+                    dataType: 'json',
+                    type: 'POST',
+                    timeout: 10000,
+                    cache: false,
+                    contentType: 'application/json; charset=UTF-8',
+                    url: '{{ url_for('get_common_info') }}',
+                    success: function (resful, status) {
+                        if(status) {
+                            var docker_image_list = resful.image_docker_list;
+                            make_image_format(docker_image_list);
+                            change_button('normal');
+                        }
+                    },
+                   error: function (resful, status) {
+                        toastr.info('获取超时,请刷新页面重试');
+                   }
+               });
             });
         }
-        function make_tar_format(data) {
+        /* get image file list end */
+        /* make image list start */
+        function make_image_format(data) {
             /*
             * data format:
-            * master node example:{'type':'master', 'files': [(1, 'hello-world.tar', '2017-05-06 14:12:32', 'test tar file'), ]}
-            *0
+            * example:[[id, file_name, create_time, recent_time, size], ...]
+            *
             * */
-            var data_type = data['type'];
-            var form;
-            if(data_type === 'master') {
-                form = document.getElementById('form-master');
-            }
-            else {
-                form = document.getElementById('form-node');
-            }
-            for(var i =0; i<data['files'].length; i++) {
+            var image_list = document.getElementById('docker_image_list');
+            image_list.innerHTML = '';
+            for(var i =0; i<data.length; i++) {
                 var row = document.createElement('tr');
-                for(var j=0; j<data['files'][i].length;j++) {
+                for(var j=0; j<data[i].length;j++) {
                    var num = document.createElement('td');
-                   num.innerText = data['files'][i][j];
-                   row.appendChild(num);
-                   if(j === data['files'][i].length - 1) {
-                       var temp = document.createElement('td');
+                   if(j < data[i].length - 1) {
+                       num.innerText = data[i][j];
+                       row.appendChild(num);
+                   }
+                   if(j === data[i].length - 1) {
+                       var status_span = document.createElement('span');
+                       if(data[i][j] === 'Using') {
+
+                           status_span.setAttribute('class', 'label label-danger');
+                           status_span.innerText = '使用中';
+                       }
+                       else if(data[i][j] === 'NoUse') {
+                           status_span.setAttribute('class', 'label label-success');
+                           status_span.innerText = '未使用';
+                       }
+                       status_span.setAttribute('name', 'image_status');
+                       num.appendChild(status_span);
+                       var td = document.createElement('td');
                        var checkbox = document.createElement('input');
                        checkbox.setAttribute("type", "checkbox");
-                       checkbox.checked = true;
-                       temp.appendChild(checkbox);
-                       row.appendChild(temp);
+                       checkbox.setAttribute('name', 'rm_check');
+                       // 将文件名及版本号作为选择框的值
+                       checkbox.setAttribute('value', data[i][1] + ':' + data[i][5]);
+                       // checkbox.checked = true;
+                       td.appendChild(checkbox);
+                       row.appendChild(num);
+                       row.appendChild(td);
                    }
                 }
-                form.appendChild(row);
+                image_list.appendChild(row);
+            }
+            toastr.info('获取Docker镜像成功');
+        }
+        /* make image list end */
+
+        // 节点按钮点击事件
+        $("#rm_image_button").click(function () {
+            var check_box = document.getElementsByName('rm_check');
+            var images_name = [];
+            var images_status = [];
+            var status = document.getElementsByName('image_status');
+            var UsingLength = 0;
+            for(var i=0; i<check_box.length; i++) {
+                if(check_box[i].checked) {
+                    images_name.push(check_box[i].value);
+                    if(status[i].innerText === '使用中') {
+                        images_status.push('Using');
+                        UsingLength += 1;
+                    }
+                    else {
+                        images_status.push('NoUse');
+                    }
+                }
+            }
+            // 校验是否选择至少一个镜像
+            if(images_name.length === 0) {
+                toastr.error('请至少选择一个镜像文件');
+                return;
+            }
+            //检测是否存在使用中的镜像,有则弹框确认
+            if(UsingLength !==0) {
+                window.Ewin.confirm({message: '部分镜像使用中,确定删除么?', title: '删除确认'}).on(function (e) {
+                    if(!e) {
+                        return;
+                    }
+                    else {
+                        $.ajax({
+                            data: JSON.stringify({'type': 'submit_rm_image', 'node': select_node, 'files_name': images_name, 'files_status': images_status}),
+                            dataType: 'json',
+                            type: 'POST',
+                            contentType: 'application/json; charset=UTF-8',
+                            url: '{{ url_for('get_rm_info') }}',
+                            success: function (resful, status) {
+                                if(status) {
+                                    change_button('normal');
+                                    if(resful.rm_image_status === 'success') {
+                                        toastr.info('请求已提交,请关注顶端消息通知');
+                                    }
+                                    else {
+                                        toastr.info('上一次请求未完成,请关注消息通知');
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
+        // 改变按钮形状,loading状态为`圈`,normal状态为`字`
+        function change_button(loading) {
+            var rm_image_button = document.getElementById('rm_image_button');
+            if(loading === 'loading') {
+                rm_image_button.setAttribute('disabled', 'disabled');
+                var icon1 = document.createElement('i');
+                rm_image_button.innerHTML = '';
+                icon1.setAttribute('class', 'fa fa-spinner fa-spin');
+                rm_image_button.appendChild(icon1);
+            }
+            else if(loading === 'normal') {
+                rm_image_button.innerText = '删除';
+                rm_image_button.removeAttribute('disabled');
             }
         }
+
     </script>
 {% endblock %}

@@ -119,12 +119,14 @@
         }
         /* get tar file list start */
         function get_image_list() {
+            toastr.info('获取镜像文件列表中,清稍候');
             $(document).ready(function () {
                $.ajax({
                     data: JSON.stringify({'type': 'image_file_list', 'node': select_node, 'recent_time': true}),
                     dataType: 'json',
                     type: 'POST',
                     contentType: 'application/json; charset=UTF-8',
+                    timeout: 10000,
                     url: '{{ url_for('get_common_info') }}',
                     success: function (resful, status) {
                         if(status) {
@@ -134,6 +136,11 @@
                             var image_file_list = resful.image_file_list;
                             make_tar_format(image_file_list);
                         }
+                    },
+                    error: function (resful ,status) {
+                       if(status === 'timeout') {
+                            toastr.info('获取超时,请刷新页面重试');
+                       }
                     }
                });
             });
@@ -160,24 +167,20 @@
                        checkbox.setAttribute("type", "checkbox");
                        checkbox.setAttribute('name', 'export_check');
                        checkbox.setAttribute('value', data[i][1]);
-                       checkbox.checked = true;
+                       // checkbox.checked = true;
                        temp.appendChild(checkbox);
                        row.appendChild(temp);
                    }
                 }
                 image_list.appendChild(row);
             }
+            toastr.info('获取镜像文件成功');
         }
         /* make image list end */
         /* import image file start */
         $("#export_button").click(function () {
             var check_box = document.getElementsByName('export_check');
-            var files_name = new Array();
-            toastr.options = {
-                               'positionClass': 'toast-top-center',
-                               'closeButton': true,
-                               'debug': false
-                            };
+            var files_name = [];
             for(var i=0; i<check_box.length; i++) {
                 if(check_box[i].checked) {
                     files_name.push(check_box[i].value);
@@ -206,7 +209,7 @@
                             var button = document.getElementById('export_button');
                             button.innerText = '导入';
                             button.removeAttribute('disabled');
-                            toastr.info('请求已提交,请关注顶端消息通知');
+                            toastr.info('请求已提交,请关注消息通知');
                             var time = window.setInterval(function () {
                                 $.ajax({
                                     data: JSON.stringify({'type': 'download'}),
@@ -225,7 +228,7 @@
 
                         }
                         else {
-                            toastr.info('上一次请求未完成,请关注顶端消息通知');
+                            toastr.info('上一次请求未完成,请关注消息通知');
                             var button = document.getElementById('export_button');
                             button.innerText = '导入';
                             button.removeAttribute('disabled');

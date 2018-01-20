@@ -8,7 +8,7 @@ from tool import Tools, Message, Event
 from flask import render_template, redirect, session, url_for, request
 import json
 
-thread_load_file_running = None
+THREAD_LOAD_FILE_RUNNING = None
 
 
 @app.route('/load/file/', methods=['GET', 'POST'])
@@ -34,29 +34,29 @@ def get_load_info():
     Interact with the previous ajax.
     :return: Returns the json string containing the relevant information.
     """
-    global thread_load_file_running
+    global THREAD_LOAD_FILE_RUNNING
     received = request.get_json()
     info = {}
     if 'username' in session:
         files_name = received.get('files_name')
         if received.get('type') == 'submit_load':
-            node = received.get('node')
+            ip = received.get('node')
             files_name = received.get('files_name')
-            print thread_load_file_running
+            print THREAD_LOAD_FILE_RUNNING
             print check_thread_busy()
             if not check_thread_busy():
-                thread_load_file_running = threading.Thread(target=load_image_file,
-                                                            args=(node, files_name, session['username']),
+                THREAD_LOAD_FILE_RUNNING = threading.Thread(target=load_image_file,
+                                                            args=(ip, files_name, session['username']),
                                                             name='thread-load-file')
-                thread_load_file_running.setDaemon(True)
-                thread_load_file_running.start()
+                THREAD_LOAD_FILE_RUNNING.setDaemon(True)
+                THREAD_LOAD_FILE_RUNNING.start()
                 info['load_file_status'] = 'success'
             else:
                 info['load_file_status'] = 'busy'
     return json.dumps(info)
 
 
-def load_image_file(node, files_name, username):
+def load_image_file(ip, files_name, username):
     """
     Load the image file to the docker mirrored repository.
     :param node: Node ip.
@@ -69,14 +69,13 @@ def load_image_file(node, files_name, username):
     connect_node.bool_flush = False
     while connect_node.flush_status:
         pass
-    node_info = connect_node.get_ip_attr(node, 'info')
     exec_status = []
     cmd = 'docker load < {path}/{filename}'
-    path = connect_node.get_ip_attr(node, 'dir')
+    path = connect_node.get_ip_attr(ip, 'dir')
     for file_name in files_name:
         load_cmd = cmd.format(path=path, filename=file_name)
         # exec load cmd
-        result = connect_node.cmd(node_info, load_cmd)
+        result = connect_node.cmd(ip, load_cmd)
         exec_status.append(result[1])
     success_num = len([x for x in exec_status if x == 'success'])
     fail_num = len(exec_status) - success_num
@@ -85,7 +84,7 @@ def load_image_file(node, files_name, username):
         Message.write_message(message_info, username, grade='danger')
     else:
         Message.write_message(message_info, username)
-        Event.write_event(username, '向{node}加载了 {number_file} 个镜像文件'.format(node=node, number_file=success_num),
+        Event.write_event(username, '向{ip}加载了 {number_file} 个镜像文件'.format(ip=ip, number_file=success_num),
                           datetime.datetime.now())
     connect_node.bool_flush = True
 
@@ -95,11 +94,11 @@ def check_thread_busy():
     Check the thread running state.
     :return: Bool. Busy is True, otherwise is False.
     """
-    global thread_load_file_running
-    if thread_load_file_running is not None:
-        print thread_load_file_running.isAlive()
-        if not thread_load_file_running.isAlive():
-            thread_load_file_running = None
+    global THREAD_LOAD_FILE_RUNNING
+    if THREAD_LOAD_FILE_RUNNING is not None:
+        print THREAD_LOAD_FILE_RUNNING.isAlive()
+        if not THREAD_LOAD_FILE_RUNNING.isAlive():
+            THREAD_LOAD_FILE_RUNNING = None
             busy_status = False
         else:
             busy_status = True

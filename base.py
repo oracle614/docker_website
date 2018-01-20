@@ -57,6 +57,8 @@ class MessageInfo(db.Model):
     username = db.Column(db.String(10), db.ForeignKey('user.username'), nullable=False)
     date = db.Column(db.DateTime, nullable=False)
     grade = db.Column(db.String(10), nullable=False)
+    # Read status
+    status = db.Column(db.String(10), nullable=False)
 
 
 db.create_all()

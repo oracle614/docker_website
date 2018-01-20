@@ -13,16 +13,15 @@ class ConnectNode(object):
     def __init__(self):
         """
             init connect
-        :param nodes_info:format:[(ip, port, username, password, dir),....]
         :result nodes format: [[trans object, ssh object, (ip, port, username, password, dir)],....]
         """
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.ERROR)
-        headler = logging.FileHandler('log/error.log')
-        headler.setLevel(logging.ERROR)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        headler.setFormatter(formatter)
-        self.logger.addHandler(headler)
+        # self.logger = logging.getLogger(__name__)
+        # self.logger.setLevel(logging.ERROR)
+        # headler = logging.FileHandler('log/error.log')
+        # headler.setLevel(logging.ERROR)
+        # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        # headler.setFormatter(formatter)
+        # self.logger.addHandler(headler)
         self.demo_status = True
         self.cluster_info = {}
         self.nodes_info = []
@@ -40,17 +39,15 @@ class ConnectNode(object):
             The background process is created to update nodes_info, nodes, and obtain the overall information of the node
         :return: There is no return value
         """
-        if not os.path.exists('log'):
-            os.makedirs('log')
-        demo1 = threading.Thread(target=self._demo, name='thread-demo1')
-        demo1.start()
+        update_demo = threading.Thread(target=self._update_nodes_demo, name='thread-demo1')
+        update_demo.start()
 
     def _get_node_info(self):
         """
             Get the cluster node information from the database and write it to self.nodes_info
         :return:node_info format: [(ip, port, username, password, dir, master),....]
         """
-        # get node info from DB
+        # Get node info from DB
         nodes = Node.query.filter().all()
         nodes_info = []
         for node in nodes:
@@ -87,7 +84,7 @@ class ConnectNode(object):
             temp.append([trans, ssh, node_info])
         self.nodes = temp
 
-    def _demo(self):
+    def _update_nodes_demo(self):
         """
             This function is a background daemon, which is used to obtain the number of containers,
         running containers, mirrored files, mirrored files, and node status of each node in the
@@ -142,7 +139,8 @@ class ConnectNode(object):
                             node_tar_num = int(result_tar_image[index][2][0].readlines()[0].split('\n')[0])
                         except Exception, e:
                             # write log to json
-                            self.logger.error(e.message)
+                            # self.logger.error(e.message)
+                            pass
                         cluster_container_num += node_container_num
                         cluster_alive_container_num += node_alive_container_num
                         cluster_docker_num += node_docker_num
@@ -171,18 +169,18 @@ class ConnectNode(object):
                 self.cluster_info = cluster_info
                 time.sleep(20)
                 self.close()
-                print '新循环开始'
             except Exception, e:
                 print e
                 self.close()
 
-    def cmd(self, node, cmd):
+    def cmd(self, ip, cmd):
         """
         Executes the specified command on the specified node.
-        :param node: format:[trans, ssh, (ip, port, username, password, dir, master)]
+        :param ip: format:'10.42.0.74'
         :param cmd: shell cmd
         :return: (ip, status, (stdout, stderr))
         """
+        node = self.get_ip_attr(ip, 'info')
         if node[0] is not None and node[1] is not None:
             try:
                 _, stdout, stderr = node[1].exec_command(cmd)
@@ -204,74 +202,12 @@ class ConnectNode(object):
         end = []
         nodes = self.nodes
         for node in nodes:
-            temp = self.cmd(node, cmd)
+            ip = node[2][0]
+            temp = self.cmd(ip, cmd)
             status = temp[1]
             result = temp[2]
-            end.append((node[2][0], status, result))
+            end.append((ip, status, result))
         return end
-
-    def get_image_file_list(self, ip, recent_time=False):
-        """
-        Gets the image file information in the specified IP node.
-        :param ip: ip str,eg:10.42.0.74
-        :return:[[id, filename, create_time[,change_time], file_size],...]
-        """
-        info = []
-        #
-        self.bool_flush = False
-        while self.flush_status:
-            pass
-        ip_dir = self.get_ip_attr(ip, 'dir')
-        node = self.get_ip_attr(ip, 'info')
-        cmd = 'ls {ip_dir}'.format(ip_dir=ip_dir)
-        exec_result = self.cmd(node, cmd)
-        if exec_result[1] == 'success':
-            filess = exec_result[2][0].readlines()
-            ids = 0
-            for files in filess:
-                ids += 1
-                files = files.split('\n')[0]
-                change_time = self._get_change_file_time(node, files)
-                file_size = self._get_file_size(node, files)
-                create_time = self._get_create_file_time(node, files)
-                if recent_time:
-                    info.append([ids, files, create_time, change_time, file_size])
-                else:
-                    info.append([ids, files, create_time, file_size])
-        self.bool_flush = True
-        return info
-
-    def get_docker_image_list(self, ip):
-        """
-        Get the docker mirror list.
-        :param ip: ip str,eg:10.42.0.74
-        :return: [[Id, image_name, imageId, created, size， tag]]
-        """
-        info = []
-        self.bool_flush = False
-        while self.flush_status:
-            pass
-        node = self.get_ip_attr(ip, 'info')
-        cmd = 'docker images |grep -v TAG'
-        exec_result = self.cmd(node, cmd)
-        pattern = r'(\S+)\s*(\S+)\s*(\S+)\s*(\d+ \S+ \S+)\s+(.*)'
-        com = re.compile(pattern)
-        if exec_result[1] == 'success':
-            imagess = exec_result[2][0].readlines()
-            ids = 0
-            for images in imagess:
-                ids += 1
-                images = images.split('\n')[0]
-                re_result = re.match(com, images)
-                image_name = re_result.group(1)
-                tag = re_result.group(2)
-                image_id = re_result.group(3)
-                created = re_result.group(4)
-                size = re_result.group(5)
-                info.append([ids, image_name, image_id, created, size, tag])
-        print info
-        self.bool_flush = True
-        return info
 
     def get_ip_list(self, master=True, available=True):
         """
@@ -283,6 +219,7 @@ class ConnectNode(object):
         while self.flush_status:
             pass
         result = []
+        print self.nodes
         for ip in self.nodes:
             if not master:
                 if ip[2][5]:
@@ -325,51 +262,6 @@ class ConnectNode(object):
             index += 1
         else:
             return None
-
-    def _get_change_file_time(self, node, filename):
-        """
-        Returns the change date of the specified file under the mirror folder directory in the specified node.
-        :param node: [trans, ssh, (......)] same as self.nodes[0]
-        :param filename: file name
-        :return: file_time(str)
-        """
-        path = node[2][4] + '/' + filename
-        cmd = 'ls --full-time {path}|cut -d " " -f 6,7|cut -d "." -f 1'.format(path=path)
-        result = self.cmd(node, cmd)
-        file_time = None
-        if result[1] == 'success':
-            file_time = result[2][0].readlines()[0].split('\n')[0]
-        return file_time
-
-    def _get_create_file_time(self, node, filename):
-        """
-        Returns the create date of the mirrored file under the mirror folder directory in the specified node.
-        :param node:[trans, ssh, (......)] same as self.nodes[0]
-        :param filename:file name
-        :return: file recent
-        """
-        path = node[2][4] + '/' + filename
-        cmd = 'stat {path}|grep Access |grep + |cut -d " " -f 2,3|cut -d "." -f 1'.format(path=path)
-        result = self.cmd(node, cmd)
-        file_recent_time = None
-        if result[1] == 'success':
-            file_recent_time = result[2][0].readlines()[0].split('\n')[0]
-        return file_recent_time
-
-    def _get_file_size(self, node, filename):
-        """
-        Returns the size of the specified file in the image folder directory in the specified node.
-        :param node: [trans, ssh, (......)] same as self.nodes[0]
-        :param filename: file name
-        :return:
-        """
-        path = node[2][4] + '/' + filename
-        cmd = 'ls -lht {path}|cut -d " " -f 5'.format(path=path)
-        result = self.cmd(node, cmd)
-        file_size = None
-        if result[1] == 'success':
-            file_size = result[2][0].readlines()[0].split('\n')[0]
-        return file_size
 
     def close_demo(self):
         """
@@ -463,31 +355,44 @@ class Message(object):
     @staticmethod
     def write_message(info, username, grade='success'):
         """
-        Writes the message to the database.
-        :param info:
-        :param username:
-        :param grade: success or danger
+        向数据库中写入消息
+        :param info:消息内容
+        :param username: 消息的属主
+        :param grade: 消息等级.success or danger
         :return:
         """
         date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         info = datetime.datetime.now().strftime('%H:%M:%S') + ': ' + info
-        message = MessageInfo(info=info, username=username, grade=grade, date=date)
+        message = MessageInfo(info=info, username=username, grade=grade, date=date, status='false')
         db.session.add(message)
         db.session.commit()
 
     @staticmethod
-    def get_message(username, num):
+    def get_message(username, max_num):
         """
-        Gets the user username recently the num bar message.
-        :param username:
-        :param num:
-        :return: [{'info': ,''grade: ,'message_id': }, {}]
+        获取新消息
+        :param username: 用户名
+        :param max_num: 如果num大于未读消息数,则仅返回新消息数;否则返回num个数新消息
+        :return: [{'info': ,''grade: ,'message_id': , 'message_status'}, {}]
         """
-        messages = MessageInfo.query.filter(MessageInfo.username == username).order_by(db.desc(MessageInfo.date)).limit(num)
+        messages = MessageInfo.query.filter(MessageInfo.username == username).filter(MessageInfo.status == 'false').order_by(db.desc(MessageInfo.date)).limit(max_num)
         messages_to_list = []
         for message in messages:
-            messages_to_list.append({'info': message.info, 'grade': message.grade, 'message_id': int(message.message_id)})
+            messages_to_list.append({'info': message.info, 'grade': message.grade, 'message_id': int(message.message_id), 'message_status': message.status})
         return messages_to_list
+
+    @staticmethod
+    def mark_true(username, message_ids):
+        """
+        标记ids的消息为已读
+        :param username:
+        :param message_ids: 消息id列表
+        :return:
+        """
+        for id in message_ids:
+            message = MessageInfo.query.filter(MessageInfo.message_id == id).first()
+            message.status = 'true'
+        db.session.commit()
 
 
 # Declare connect_node for other class access.
@@ -519,6 +424,14 @@ class Tools(object):
             redirect(url_for('lock'))
 
     @staticmethod
+    def get_user_set():
+        """
+        返回用户信息
+        :return:
+        """
+
+
+    @staticmethod
     def get_connect_node():
         """
             Returns the global variable connect_node to facilitate access to the connection object instance at other
@@ -527,3 +440,176 @@ class Tools(object):
         """
         global connect_node
         return connect_node
+
+    @staticmethod
+    def get_ip_list(master=True, available=True):
+        """返回ip列表.默认返回主节点及可用节点
+        :param available: 是否返回不可用节点.`True`表示仅返回可用节点.`False`表示返回所有节点
+        :param master: 是否返回主节点.`True`表示返回主节点ip,`False`表示返回所有节点
+        :return:[ip1, ip2, ip3]
+        """
+        connect_node = Tools.get_connect_node()
+        connect_node.bool_flush = False
+        while connect_node.flush_status:
+            pass
+        result = []
+        for ip in connect_node.nodes:
+            if not master:
+                if ip[2][5]:
+                    continue
+            if available:
+                if ip[0] is None or ip[1] is None:
+                    continue
+            result.append(ip[2][0])
+        connect_node.bool_flush = True
+        return result
+
+    @staticmethod
+    def get_image_file_list(ip, recent_time=False):
+        """获取指定ip的镜像文件信息列表.
+        :param recent_time: 是否返回最近时间
+        :param ip: ip str,eg:10.42.0.74
+        :return:[[id, filename, create_time[,change_time], file_size],...]
+        """
+        connect = Tools.get_connect_node()
+        info = []
+        #
+        connect.bool_flush = False
+        while connect.flush_status:
+            pass
+        ip_dir = connect.get_ip_attr(ip, 'dir')
+        node = connect.get_ip_attr(ip, 'info')
+        cmd = 'ls {ip_dir}'.format(ip_dir=ip_dir)
+        exec_result = connect.cmd(ip, cmd)
+        if exec_result[1] == 'success':
+            filess = exec_result[2][0].readlines()
+            ids = 0
+            for files in filess:
+                ids += 1
+                files = files.split('\n')[0]
+                change_time = Tools._get_change_file_time(node, files)
+                file_size = Tools._get_file_size(node, files)
+                create_time = Tools._get_create_file_time(node, files)
+                if recent_time:
+                    info.append([ids, files, create_time, change_time, file_size])
+                else:
+                    info.append([ids, files, create_time, file_size])
+        connect.bool_flush = True
+        return info
+
+    @staticmethod
+    def get_docker_image_list(ip, status=False):
+        """返回Docker镜像列表
+        :param status: 是否返回镜像状态.`True`表示返回,`False`表示不返回
+        :param ip: ip str,eg:10.42.0.74
+        :return: [[Id, image_name, imageId, created, size， tag]]
+        """
+        connect = Tools.get_connect_node()
+        info = []
+        connect.bool_flush = False
+        while connect.flush_status:
+            pass
+        cmd = 'docker images |grep -v TAG'
+        exec_result = connect.cmd(ip, cmd)
+        pattern = r'(\S+)\s*(\S+)\s*(\S+)\s*(\d+ \S+ \S+)\s+(.*)'
+        com = re.compile(pattern)
+        if exec_result[1] == 'success':
+            imagess = exec_result[2][0].readlines()
+            ids = 0
+            for images in imagess:
+                ids += 1
+                images = images.split('\n')[0]
+                re_result = re.match(com, images)
+                image_name = re_result.group(1)
+                tag = re_result.group(2)
+                image_id = re_result.group(3)
+                created = re_result.group(4)
+                size = re_result.group(5)
+                if status is True:
+                    container_image_list = Tools._get_container_image(ip)
+                    complex_images = image_name + ':' + tag
+                    if complex_images in container_image_list:
+                        image_status = 'Using'
+                    else:
+                        image_status = 'NoUse'
+                    info.append([ids, image_name, image_id, created, size, tag, image_status])
+                else:
+                    info.append([ids, image_name, image_id, created, size, tag])
+        connect.bool_flush = True
+        return info
+
+    @staticmethod
+    def _get_container_image(ip):
+        """返回该节点所有容器依赖的镜像
+        基本思路：
+        1. 通过docker ps -a命令返回所有容器所用的镜像
+        2. 处理镜像名：若获取的镜像名包含版本号,不处理;若获取的镜像名不包含版本号,则在该镜像名后添加`:latest`标签
+        3. 将处理完成的容器镜像名列表返回
+        :param ip: 操作节点IP
+        :return: 镜像名列表[镜像名1...]
+        """
+        connect = Tools.get_connect_node()
+        cmd = "docker ps -a|grep -v IMAGE|awk '{print $2}'"
+        # 获取所有容器镜像
+        exec_result = connect.cmd(ip, cmd)
+        container_image_list = []
+        if exec_result[1] == 'success':
+            container_images = exec_result[2][0].readlines()
+            for container_image in container_images:
+                container_image = container_image.split('\n')[0]
+                # 逐个处理
+                if ':' not in container_image:
+                    container_image += ':latest'
+                container_image_list.append(container_image)
+        return container_image_list
+
+    @staticmethod
+    def _get_change_file_time(node, filename):
+        """
+        Returns the change date of the specified file under the mirror folder directory in the specified node.
+        :param node: [trans, ssh, (......)] same as self.nodes[0]
+        :param filename: file name
+        :return: file_time(str)
+        """
+        connect = Tools.get_connect_node()
+        path = node[2][4] + '/' + filename
+        cmd = 'ls --full-time {path}|cut -d " " -f 6,7|cut -d "." -f 1'.format(path=path)
+        result = connect.cmd(node[2][0], cmd)
+        file_time = None
+        if result[1] == 'success':
+            file_time = result[2][0].readlines()[0].split('\n')[0]
+        return file_time
+
+    @staticmethod
+    def _get_create_file_time(node, filename):
+        """
+        Returns the create date of the mirrored file under the mirror folder directory in the specified node.
+        :param node:[trans, ssh, (......)] same as self.nodes[0]
+        :param filename:file name
+        :return: file recent
+        """
+        connect = Tools.get_connect_node()
+        path = node[2][4] + '/' + filename
+        cmd = 'stat {path}|grep Access |grep + |cut -d " " -f 2,3|cut -d "." -f 1'.format(path=path)
+        result = connect.cmd(node[2][0], cmd)
+        file_recent_time = None
+        if result[1] == 'success':
+            file_recent_time = result[2][0].readlines()[0].split('\n')[0]
+        return file_recent_time
+
+    @staticmethod
+    def _get_file_size(node, filename):
+        """
+        Returns the size of the specified file in the image folder directory in the specified node.
+        :param node: [trans, ssh, (......)] same as self.nodes[0]
+        :param filename: file name
+        :return:
+        """
+        connect = Tools.get_connect_node()
+        path = node[2][4] + '/' + filename
+        cmd = 'ls -lht {path}|cut -d " " -f 5'.format(path=path)
+        result = connect.cmd(node[2][0], cmd)
+        file_size = None
+        if result[1] == 'success':
+            file_size = result[2][0].readlines()[0].split('\n')[0]
+        return file_size

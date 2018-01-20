@@ -125,11 +125,13 @@
         }
         /* get tar file list start */
         function get_image_list() {
+            toastr.info('获取镜像文件类表中,请稍候');
             $(document).ready(function () {
                $.ajax({
                     data: JSON.stringify({'type': 'image_file_list', 'node': select_node, 'recent_time': true}),
                     dataType: 'json',
                     type: 'POST',
+                    timeout: 10000,
                     contentType: 'application/json; charset=UTF-8',
                     url: '{{ url_for('get_common_info') }}',
                     success: function (resful, status) {
@@ -140,6 +142,11 @@
                             var image_file_list = resful.image_file_list;
                             make_tar_format(image_file_list);
                         }
+                    },
+                    error: function (resful ,status) {
+                       if(status === 'timeout') {
+                            toastr.info('获取超时,请刷新页面重试');
+                       }
                     }
                });
             });
@@ -164,26 +171,22 @@
                        var temp = document.createElement('td');
                        var checkbox = document.createElement('input');
                        checkbox.setAttribute("type", "checkbox");
-                       checkbox.setAttribute('name', 'export_check');
+                       checkbox.setAttribute('name', 'load_check');
                        checkbox.setAttribute('value', data[i][1]);
-                       checkbox.checked = true;
+                       // checkbox.checked = true;
                        temp.appendChild(checkbox);
                        row.appendChild(temp);
                    }
                 }
                 image_list.appendChild(row);
             }
+            toastr.info('获取镜像文件成功');
         }
         /* make image list end */
         /* import image file start */
         $("#load_button").click(function () {
-            var check_box = document.getElementsByName('export_check');
+            var check_box = document.getElementsByName('load_check');
             var files_name = new Array();
-            toastr.options = {
-                               'positionClass': 'toast-top-center',
-                               'closeButton': true,
-                               'debug': false
-                            };
             for(var i=0; i<check_box.length; i++) {
                 if(check_box[i].checked) {
                     files_name.push(check_box[i].value);
@@ -214,7 +217,6 @@
                             toastr.info('请求已提交,请关注顶端消息通知');
                         }
                         else {
-                            alert(resful.load_file_status);
                             toastr.info('上一次请求未完成,请关注顶端消息');
                             button.innerText = '加载';
                             button.removeAttribute('disabled');

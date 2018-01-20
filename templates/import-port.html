@@ -74,6 +74,7 @@
                 type: 'POST',
                 contentType: 'application/json; charset=UTF-8',
                 url: '{{ url_for('get_common_info') }}',
+                sync: true,
                 success: function (resful, status) {
                     if(status) {
                         var node_list = resful.node_list;
@@ -94,6 +95,7 @@
         /* get node list end */
         /* get tar file list start */
         function get_image_list() {
+            toastr.info('获取镜像文件列表中,清稍候');
             $(document).ready(function () {
                $.ajax({
                     data: JSON.stringify({'type': 'image_file_list', 'recent_time': false}),
@@ -101,6 +103,7 @@
                     type: 'POST',
                     contentType: 'application/json; charset=UTF-8',
                     url: '{{ url_for('get_import_info') }}',
+                    timeout: 10000,
                     success: function (resful, status) {
                         if(status) {
                             var button = document.getElementById('import_button');
@@ -109,6 +112,11 @@
                             var image_file_list = resful.image_file_list;
                             make_tar_format(image_file_list);
                         }
+                    },
+                    error: function (resful ,status) {
+                       if(status === 'timeout') {
+                            toastr.info('获取超时,请刷新页面重试');
+                       }
                     }
                });
             });
@@ -135,13 +143,14 @@
                        checkbox.setAttribute("type", "checkbox");
                        checkbox.setAttribute('name', 'import_check');
                        checkbox.setAttribute('value', data[i][1]);
-                       checkbox.checked = true;
+                       // checkbox.checked = true;
                        temp.appendChild(checkbox);
                        row.appendChild(temp);
                    }
                 }
                 image_list.appendChild(row);
             }
+            toastr.info('获取镜像文件成功');
         }
         /* make image list end */
         /* import image file start */
@@ -154,13 +163,9 @@
             button.appendChild(icon);
             var check_box = document.getElementsByName('import_check');
             var select = document.getElementsByName('select_node');
-            var files_name = new Array();
-            var node_list = new Array();
-            toastr.options = {
-                               'positionClass': 'toast-top-center',
-                               'closeButton': true,
-                               'debug': false
-                            };
+            var files_name = [];
+            var node_list = [];
+
             for(var i=0; i<check_box.length; i++) {
                 if(check_box[i].checked) {
                     files_name.push(check_box[i].value);
@@ -189,12 +194,11 @@
                 url: '{{ url_for('get_import_info') }}',
                 success: function (resful, status) {
                     if(status) {
-                        get_image_list();
                         if(resful.import_port_status === 'success') {
-                            toastr.info('请求已提交,请关注顶端消息通知');
+                            toastr.info('请求已提交,请关注消息通知');
                         }
                         else {
-                            toastr.info('上一次请求未完成,请关注消息通知');
+                            toastr.info('请求未完成,请关注消息通知');
                         }
                     }
                 }

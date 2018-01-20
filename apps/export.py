@@ -16,8 +16,8 @@ from tool import Message
 from tool import Event
 
 
-thread_export_local_running = None
-tar_export_status = False
+THREAD_EXPORT_LOCAL_RUNNING = None
+DOWNLOAD_EXPORT_STATUS = False
 
 
 @app.route('/export/local/', methods=['GET', 'POST'])
@@ -36,55 +36,41 @@ def export_image():
 
 @app.route('/export/info/', methods=['POST'])
 def get_export_info():
-    global thread_export_local_running
+    global THREAD_EXPORT_LOCAL_RUNNING
     received = request.get_json()
     info = {}
     if 'username' in session:
         master_node_ip = Sys.query.filter().first().master_node
-    # if received.get('type') == 'node_list':
-    #     if 'username' in session:
-    #         user_role = User.query.filter(User.username == session.get('username')).first().role
-    #         # Only when the current user's role is warden, the IP address of the master node will be displayed in the
-    #         # previous section.
-    #         if user_role == 'warden' and received.get('master'):
-    #             info['node_list'] = Tools.get_connect_node().get_ip_list(master=True)
-    #         else:
-    #             info['node_list'] = Tools.get_connect_node().get_ip_list(master=False)
-    # elif received.get('type') == 'image_file_list':
-    #     if received.get('recent_time'):
-    #         node = received.get('node')
-    #         info['image_file_list'] = Tools.get_connect_node().get_image_file_list(node, recent_time=True)
         if received.get('type') == 'submit_export':
             node = received.get('node')
             files_name = received.get('files_name')
-            print "submit", thread_export_local_running
             if not check_thread_busy():
-                thread_export_local_running = threading.Thread(target=send_files_download,
+                THREAD_EXPORT_LOCAL_RUNNING = threading.Thread(target=send_files_download,
                                                                args=(node, files_name, session['username']),
                                                                name='thread-export-local')
-                thread_export_local_running.setDaemon(True)
-                thread_export_local_running.start()
+                THREAD_EXPORT_LOCAL_RUNNING.setDaemon(True)
+                THREAD_EXPORT_LOCAL_RUNNING.start()
                 info['export_local_status'] = 'success'
             else:
                 info['export_local_status'] = 'busy'
         elif received.get('type') == 'download':
-            info['download_status'] = tar_export_status
+            info['download_status'] = DOWNLOAD_EXPORT_STATUS
         print info
     return json.dumps(info)
 
 
 @app.route('/export/download/')
 def export_download():
-    global tar_export_status
-    if os.path.exists(os.getcwd() + '/' + 'Download.tar') and tar_export_status:
+    global DOWNLOAD_EXPORT_STATUS
+    if os.path.exists(os.getcwd() + '/' + 'Download.tar') and DOWNLOAD_EXPORT_STATUS:
         response = make_response(send_file('Download.tar'))
         response.headers["Content-Disposition"] = "attachment; filename=Download.tar;"
-        tar_export_status = False
+        DOWNLOAD_EXPORT_STATUS = False
         return response
 
 
 def send_files_download(node, files_name, username):
-    global tar_export_status
+    global DOWNLOAD_EXPORT_STATUS
     Message.write_message('开始打包镜像文件,请等待', username)
     connect_node = Tools.get_connect_node()
     connect_node.bool_flush = False
@@ -99,7 +85,7 @@ def send_files_download(node, files_name, username):
     for file_name in files_name:
         cmd = send_cmd.format(username=node_username, node_ip=node, sou_path=sou_path, file=file_name, local_path=DOWNLOAD_FOLDER)
         # exist error
-        # result = connect_node.cmd(master_ip_info, cmd)
+        # result = connect_node.cmd(master_ip, cmd)
         # exec_status.append(result[1])
         status, _ = commands.getstatusoutput(cmd)
         if status == 0:
@@ -124,20 +110,20 @@ def send_files_download(node, files_name, username):
         Message.write_message(message_info, username)
         Event.write_event(username, '从{node}导出了 {number_file} 个镜像文件'.format(node=node, number_file=success_num),
                           datetime.datetime.now())
-    tar_export_status = True
+    DOWNLOAD_EXPORT_STATUS = True
 
 
 def check_thread_busy():
     """
-
-    :return:
+    检查线程执行状态
+    :return: `True`: 线程繁忙; `False`: 线程结束
     """
-    global thread_export_local_running
-    print thread_export_local_running
-    if thread_export_local_running is not None:
-        print thread_export_local_running.isAlive()
-        if not thread_export_local_running.isAlive():
-            thread_export_local_running = None
+    global THREAD_EXPORT_LOCAL_RUNNING
+    print THREAD_EXPORT_LOCAL_RUNNING
+    if THREAD_EXPORT_LOCAL_RUNNING is not None:
+        print THREAD_EXPORT_LOCAL_RUNNING.isAlive()
+        if not THREAD_EXPORT_LOCAL_RUNNING.isAlive():
+            THREAD_EXPORT_LOCAL_RUNNING = None
             busy_status = False
         else:
             busy_status = True

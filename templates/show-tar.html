@@ -65,11 +65,6 @@
 {% endblock %}
 {% block script %}
     <script>
-        toastr.options = {
-                               'positionClass': 'toast-top-center',
-                               'closeButton': true,
-                               'debug': false
-                            };
         /* get node list start */
         $(document).ready(function () {
            $.ajax({
@@ -111,12 +106,6 @@
         function change_node(obj) {
             var value = obj.options[obj.selectedIndex].value;
             select_node = value;
-{#            var button = document.getElementById('export_button');#}
-{#            button.setAttribute('disabled', 'disabled');#}
-{#            var icon = document.createElement('i');#}
-{#            button.innerHTML = '';#}
-{#            icon.setAttribute('class', 'fa fa-spinner fa-spin');#}
-{#            button.appendChild(icon);#}
             get_image_list();
         }
         /* get tar file list start */
@@ -127,16 +116,19 @@
                     data: JSON.stringify({'type': 'image_file_list', 'node': select_node, 'recent_time': true}),
                     dataType: 'json',
                     type: 'POST',
+                    timeout: 10000,
                     contentType: 'application/json; charset=UTF-8',
                     url: '{{ url_for('get_common_info') }}',
                     success: function (resful, status) {
                         if(status) {
-{#                            var button = document.getElementById('export_button');#}
-{#                            button.innerText = '导入';#}
-{#                            button.removeAttribute('disabled');#}
                             var image_file_list = resful.image_file_list;
                             make_tar_format(image_file_list);
                         }
+                    },
+                    error: function (resful ,status) {
+                       if(status === 'timeout') {
+                            toastr.info('获取超时,请刷新页面重试');
+                       }
                     }
                });
             });
@@ -157,20 +149,10 @@
                    var num = document.createElement('td');
                    num.innerText = data[i][j];
                    row.appendChild(num);
-{#                   if(j === data[i].length - 1) {#}
-{#                       var temp = document.createElement('td');#}
-{#                       var checkbox = document.createElement('input');#}
-{#                       checkbox.setAttribute("type", "checkbox");#}
-{#                       checkbox.setAttribute('name', 'export_check');#}
-{#                       checkbox.setAttribute('value', data[i][1]);#}
-{#                       checkbox.checked = true;#}
-{#                       temp.appendChild(checkbox);#}
-{#                       row.appendChild(temp);#}
-{#                   }#}
                 }
                 image_list.appendChild(row);
             }
-            toastr.info('镜像文件列表获取成功');
+            toastr.info('获取镜像文件成功');
         }
         /* make image list end */
     </script>

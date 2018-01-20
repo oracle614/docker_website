@@ -17,11 +17,12 @@
     <!-- MAIN CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <!-- Bootstrp-select CSS -->
-    <link rel="stylesheet", href="{{ url_for('static', filename='vendor/bootstrap-select/dist/css/bootstrap-select.min.css') }}"
+    <link rel="stylesheet", href="{{ url_for('static', filename='vendor/bootstrap-select/dist/css/bootstrap-select.min.css') }}">
 {#    <!-- FOR DEMO PURPOSES ONLY. You should remove this in your project -->#}
 {#	<link rel="stylesheet" href="{{ url_for('static', filename='css/demo.css') }}">#}
 	<!-- GOOGLE FONTS -->
-	<link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/google_font.css') }}" rel="stylesheet">
+{#	<link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700" rel="stylesheet">#}
 	<!-- ICONS -->
 	<link rel="apple-touch-icon" sizes="76x76" href="{{ url_for('static', filename='img/apple-icon.png') }}">
 	<link rel="icon" type="image/png" sizes="96x96" href="{{ url_for('static', filename='img/favicon.png') }}">
@@ -50,10 +51,10 @@
 				<div id="navbar-menu">
 					<ul class="nav navbar-nav navbar-right">
                         <li class="dropdown">
-                            <a href="{{ request.url }}" class="dropdown-toggle"><i class="lnr lnr-sync"></i> <span>Refresh</span></a>
+                            <a href="{{ request.url }}" class="dropdown-toggle"><i class="lnr lnr-sync"></i> <!-- <span>Refresh</span> --></a>
                         </li>
 						<li class="dropdown">
-							<a href="#" class="dropdown-toggle icon-menu" data-toggle="dropdown" onclick="$('#message_number').hide()">
+							<a href="#" class="dropdown-toggle icon-menu" data-toggle="dropdown" onclick="change_read_status(true)">
 								<i class="lnr lnr-alarm"></i>
 								<span class="badge bg-danger" id="message_number">0</span>
 							</a>
@@ -167,7 +168,7 @@
 								    </ul>
 							    </div>
 						    </li>
-					</ul>
+					    </ul>
 				</nav>
 			</div>
 		</div>
@@ -195,22 +196,28 @@
 	<script src="/static/js/klorofil-common.js"></script>
     <script src="/static/vendor/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
 	<script src="/static/vendor/toastr/toastr.min.js"></script>
-    {% block script %}
-    {% endblock %}
+	<script src="/static/js/common.js"></script>
 	<script>
+        var read_status = false;
         toastr.options = {
-                               'positionClass': 'toast-top-center',
-                               'closeButton': true,
-                               'debug': false
-                            };
+            positionClass: 'toast-top-right',
+            closeButton: true,
+            debug: false,
+            progressBar: true
+        };
         get_head_info();
         get_message_info();
         window.setInterval(get_head_info, 10000);
-        window.setInterval(get_message_info, 10000);
+        var message_interval = window.setInterval(get_message_info, 5000);
+
+        function change_read_status(value) {
+            read_status = value;
+            $("#message_number").hide();
+        }
         /* get head info start */
         function get_head_info() {
              $.ajax({
-                data: JSON.stringify({'test':'test'}),
+                data: JSON.stringify({}),
                 dataType: 'json',
                 type: 'POST',
                 contentType: 'application/json; charset=UTF-8',
@@ -230,10 +237,20 @@
         }
         /* get head info end */
 
-        /* get message start */
+        /* make message list start */
         function get_message_info() {
+            var ids = [];
+            // 若点击消息时,标记消息为已读
+            if(read_status){
+                /* 清除消息定时器 */
+                window.clearInterval(message_interval);
+                var messages_ids_obj = document.getElementsByName('message_id');
+                for(var i=0; i<messages_ids_obj.length; i++) {
+                    ids.push(messages_ids_obj[i].innerText);
+                }
+            }
             $.ajax({
-               data: JSON.stringify({'test': 'test'}),
+                data: JSON.stringify({'read_status': read_status, 'ids': ids}),
                 dataType: 'json',
                 type: 'POST',
                 contentType: 'application/json; charset=UTF-8',
@@ -245,7 +262,7 @@
                         var new_message_number = resful.new_number;
                         var message_number = content.length;
                         var span_message_number = document.getElementById('message_number');
-                        span_message_number.innerText = new_message_number;
+                        span_message_number.innerText = message_number;
                         var message_box = document.getElementById('message_box');
                         message_box.innerHTML = '';
                         for(var i=0; i<message_number; i++) {
@@ -261,11 +278,23 @@
                             var span2 = document.createElement('span');
                             span2.innerText = content[i].info;
                             a.appendChild(span2);
+                            /* 消息 id 隐藏*/
+                            var span3 = document.createElement('span');
+                            span3.setAttribute('name', 'message_id');
+                            span3.innerText = content[i].message_id;
+                            span3.style.display = 'none';
+                            a.appendChild(span3);
                             li.appendChild(a);
                             message_box.appendChild(li);
                         }
-                        if(message_number === 0 || new_message_number === 0) {
+                        if(message_number === 0) {
                             $("#message_number").hide();
+                            a = document.createElement('a');
+                            a.setAttribute('class', 'more');
+                            a.innerText = '无新消息';
+                            li = document.createElement('li');
+                            li.appendChild(a);
+                            message_box.appendChild(li);
                         }
                         else {
                             $("#message_number").show();
@@ -274,11 +303,15 @@
                             var info = '您有' + new_message_number.toString() + '条新消息';
                             toastr.info(info);
                         }
+                        if(read_status) {
+                            message_interval = window.setInterval(get_message_info, 5000);
+                            read_status = false;
+                        }
                     }
                 }
             });
         }
-        /* get message end */
+        /* make message list end */
 
 
         function refresh_success() {
@@ -408,5 +441,7 @@
 	});
 	</script>
     <!-- END javascript -->
+    {% block script %}
+    {% endblock %}
 </body>
 </html>

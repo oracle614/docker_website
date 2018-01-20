@@ -61,6 +61,7 @@
                 type: 'POST',
                 contentType: 'application/json; charset=UTF-8',
                 url: '{{ url_for('get_common_info') }}',
+                sync: true,
                 success: function (resful, status) {
                     if(status) {
                         var node_list = resful.node_list;

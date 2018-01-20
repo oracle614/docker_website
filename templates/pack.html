@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Import Page | Klorofil - Docker Manager System{% endblock %}
+{% block title %}Pack Page | Klorofil - Docker Manager System{% endblock %}
 {% block main %}
     <!-- MAIN CONTENT -->
     <div class="main-content" >
@@ -9,7 +9,7 @@
                 <br>
                 <div class="panel panel-scrolling">
                     <div class="panel-heading">
-                        <h3 class="panel-title">节点Docker镜像</h3>
+                        <h3 class="panel-title">打包Docker镜像</h3>
                         <div class="right">
                             <button type="button" class="btn-toggle-collapse"><i class="lnr lnr-chevron-up"></i></button>
                             <button type="button" class="btn-remove"><i class="lnr lnr-cross"></i></button>
@@ -17,20 +17,21 @@
                     </div>
                     <div class="panel-body no-padding">
                         <form action="#" method="post">
-                        <table class="table table-condensed">
-                            <thead>
-                            <tr>
-                                <th>镜像编号</th>
-                                <th>镜像文件名</th>
-                                <th>镜像ID</th>
-                                <th>镜像版本</th>
-                                <th>备注</th>
-                                <th>选择</th>
-                            </tr>
-                            </thead>
-                            <tbody id="form-master">
-                            </tbody>
-                        </table>
+                            <table class="table table-condensed">
+                                <thead>
+                                    <tr>
+                                        <th>镜像编号</th>
+                                        <th>镜像名</th>
+                                        <th>镜像ID</th>
+                                        <th>创建时间</th>
+                                        <th>大小</th>
+                                        <th>版本</th>
+                                        <th>打包</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="docker_image_list">
+                                </tbody>
+                            </table>
                         </form>
                     </div>
                     <div class="panel-footer">
@@ -44,20 +45,20 @@
                                         节点
                                     </label>
                                     <div class="col-md-5">
-                                        <select id="usertype" class="selectpicker form-control">
-                                            <option value="0">10.42.0.74</option>
-                                            <option value="1">10.42.0.75</option>
-                                            <option value="2">10.42.0.76</option>
-                                            <option value="3">10.42.0.77</option>
-                                            <option value="4">10.42.0.78</option>
+                                        <select id="node_list" class="selectpicker form-control" onchange="change_node(this)">
                                         </select>
                                     </div>
-                                    <div class="col-md-2"></div>
-                                    <div class="col-md-2">
-                                         <button class="btn btn-primary" type="button">打包至文件夹</button>
+                                    <div class="col-md-4"></div>
+                                    <div class="col-md-1">
+                                         <button class="btn btn-primary" type="button" id="pack_port_button" disabled="disabled">
+                                            <i class="fa fa-spinner fa-spin" id="icon_loading"></i>
+                                         </button>
                                     </div>
-                                    <div class="col-md-2">
-                                        <button class="btn btn-primary" type="button">打包至本地</button>
+{#                                    <div class="col-md-1"></div>#}
+                                    <div class="col-md-1">
+                                        <button class="btn btn-primary" type="button" id="pack_local_button" disabled="disabled">
+                                            <i class="fa fa-spinner fa-spin" id="icon_loading"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </form>
@@ -70,59 +71,231 @@
 {% endblock %}
 {% block script %}
     <script>
-{#        $(window).on('load', function () {#}
-{#            $('#usertype').selectpicker({#}
-{#            'countSelectedText': 2#}
-{#            });#}
-{#        });#}
-        function get_tar_info(type) {
-            var ip = null;
-            if(type === 'main') {
-                ip = '{{ cluster_info.master_ip }}';
-            }
-            else {
-                ip = '1';
-            }
-            $.ajax({
-                async: false,
-                data: ip,
+        var select_node = null;
+        /* get node list start */
+        $(document).ready(function () {
+           $.ajax({
+                data: JSON.stringify({'type': 'node_list', 'master': true, 'available': true}),
                 dataType: 'json',
                 type: 'POST',
-                success: make_tar_format,
-                url: '{{ url_for("import_port") }}'
+                contentType: 'application/json; charset=UTF-8',
+                cache: false,
+                url: '{{ url_for('get_common_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        var node_list = resful.node_list;
+                        for(var i=0; i<node_list.length; i++) {
+                           var option = document.createElement('option');
+                            if(i === 0) {
+                                option.setAttribute('selected', true);
+                            }
+                            option.setAttribute('value', node_list[i]);
+                            option.setAttribute('name', 'select_node');
+                            option.innerText = node_list[i];
+                            $("#node_list").append(option);
+                        }
+                        $("#node_list").selectpicker("refresh");
+                        get_selected_node();
+                        get_image_list();
+                    }
+                }
+           });
+        });
+        /* get node list end */
+
+        function get_selected_node() {
+            var select = document.getElementsByName('select_node');
+            for(var j=0; j<select.length; j++) {
+                if(select[j].selected) {
+                    select_node = select[j].value;
+                }
+            }
+        }
+        /* Change option to execute */
+        function change_node(obj) {
+            var select_value = obj.options[obj.selectedIndex].value;
+            select_node = select_value;
+            change_button('loading');
+            get_image_list();
+        }
+        /* get tar file list start */
+        function get_image_list() {
+            toastr.info('获取Docker镜像列表中,清稍候');
+            $(document).ready(function () {
+               $.ajax({
+                    data: JSON.stringify({'type': 'image_docker_list', 'node': select_node}),
+                    dataType: 'json',
+                    type: 'POST',
+                    timeout: 10000,
+                    cache: false,
+                    contentType: 'application/json; charset=UTF-8',
+                    url: '{{ url_for('get_common_info') }}',
+                    success: function (resful, status) {
+                        if(status) {
+                            var docker_image_list = resful.image_docker_list;
+                            change_button('normal');
+                            make_image_format(docker_image_list);
+                        }
+                        else if(status === 'timeout') {
+                            toastr.info('获取超时,请刷新页面重试');
+                        }
+                    }
+               });
             });
         }
-        function make_tar_format(data) {
+        /* get image file list end */
+        /* make image list start */
+        function make_image_format(data) {
             /*
             * data format:
-            * master node example:{'type':'master', 'files': [(1, 'hello-world.tar', '2017-05-06 14:12:32', 'test tar file'), ]}
-            *0
+            * example:[[id, file_name, create_time, recent_time, size], ...]
+            *
             * */
-            var data_type = data['type'];
-            var form;
-            if(data_type === 'master') {
-                form = document.getElementById('form-master');
-            }
-            else {
-                form = document.getElementById('form-node');
-            }
-            for(var i =0; i<data['files'].length; i++) {
+            var image_list = document.getElementById('docker_image_list');
+            image_list.innerHTML = '';
+            for(var i =0; i<data.length; i++) {
                 var row = document.createElement('tr');
-                for(var j=0; j<data['files'][i].length;j++) {
+                for(var j=0; j<data[i].length;j++) {
                    var num = document.createElement('td');
-                   num.innerText = data['files'][i][j];
+                   num.innerText = data[i][j];
                    row.appendChild(num);
-                   if(j === data['files'][i].length - 1) {
+                   if(j === data[i].length - 1) {
                        var temp = document.createElement('td');
                        var checkbox = document.createElement('input');
                        checkbox.setAttribute("type", "checkbox");
-                       checkbox.checked = true;
+                       checkbox.setAttribute('name', 'pack_check');
+                       // 将文件名及版本号作为选择框的值
+                       checkbox.setAttribute('value', data[i][1] + ':' + data[i][5]);
+                       // checkbox.checked = true;
                        temp.appendChild(checkbox);
                        row.appendChild(temp);
                    }
                 }
-                form.appendChild(row);
+                image_list.appendChild(row);
+            }
+            toastr.info('获取Docker镜像成功');
+        }
+        /* make image list end */
+
+        // 节点按钮点击事件
+        $("#pack_port_button").click(function () {
+            var check_box = document.getElementsByName('pack_check');
+            var images_name = [];
+            for(var i=0; i<check_box.length; i++) {
+                if(check_box[i].checked) {
+                    images_name.push(check_box[i].value);
+                }
+            }
+            // 校验是否选择
+            if(images_name.length === 0) {
+                toastr.error('请至少选择一个镜像文件');
+                return;
+            }
+            // 更改按钮形状为loading
+            change_button('loading');
+            // 更新节点信息
+            get_selected_node();
+            // 发送打包请求
+            $.ajax({
+                data: JSON.stringify({'type': 'submit_pack_port', 'select_node': select_node, 'images_name': images_name}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_pack_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        change_button('normal');
+                        if(resful.pack_port_status === 'success') {
+                            toastr.info('请求已提交,请关注顶端消息通知');
+                        }
+                        else {
+                            toastr.info('上一次请求未完成,请关注消息通知');
+                        }
+                    }
+                }
+            });
+        });
+
+        // 本地按钮点击事件
+        $("#pack_local_button").click(function () {
+            var check_box = document.getElementsByName('pack_check');
+            var images_name = [];
+            for(var i=0; i<check_box.length; i++) {
+                if(check_box[i].checked) {
+                    images_name.push(check_box[i].value);
+                }
+            }
+            // 校验是否选择
+            if(images_name.length === 0) {
+                toastr.error('请至少选择一个镜像文件');
+                return;
+            }
+            // 更改按钮形状为loading
+            change_button('loading');
+            // 更新节点信息
+            get_selected_node();
+            // 发送打包请求
+            $.ajax({
+                data: JSON.stringify({'type': 'submit_pack_local', 'node': select_node, 'files_name': images_name}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_pack_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        change_button('normal');
+                        if(resful.pack_local_status === 'success') {
+                            toastr.info('请求已提交,请关注消息通知');
+                            var time = window.setInterval(function () {
+                                $.ajax({
+                                    data: JSON.stringify({'type': 'download'}),
+                                    dataType: 'json',
+                                    type: 'POST',
+                                    contentType: 'application/json; charset=UTF-8',
+                                    url: '{{ url_for('get_pack_info') }}',
+                                    success: function (resful, status) {
+                                        if(status){
+                                            if(resful.download_status) {
+                                                window.location.href = "{{ url_for('pack_download') }}";
+                                                window.clearInterval(time);
+                                            }
+                                        }
+                                    }
+                                });
+                            }, 5000);
+
+                        }
+                        else {
+                            toastr.info('上一次请求未完成,请关注消息通知');
+                        }
+                    }
+                }
+            });
+        });
+
+        // 改变按钮形状,loading状态为`圈`,normal状态为`字`
+        function change_button(loading) {
+            var pack_port_button = document.getElementById('pack_port_button');
+            var pack_local_button = document.getElementById('pack_local_button');
+            if(loading === 'loading') {
+                pack_port_button.setAttribute('disabled', 'disabled');
+                pack_local_button.setAttribute('disabled', 'disabled');
+                var icon1 = document.createElement('i');
+                var icon2 = document.createElement('i');
+                pack_port_button.innerHTML = '';
+                pack_local_button.innerHTML = '';
+                icon1.setAttribute('class', 'fa fa-spinner fa-spin');
+                icon2.setAttribute('class', 'fa fa-spinner fa-spin');
+                pack_port_button.appendChild(icon1);
+                pack_local_button.appendChild(icon2);
+            }
+            else if(loading === 'normal') {
+                pack_port_button.innerText = '节点';
+                pack_local_button.innerText = '本地';
+                pack_local_button.removeAttribute('disabled');
+                pack_port_button.removeAttribute('disabled');
             }
         }
+
     </script>
 {% endblock %}

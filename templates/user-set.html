@@ -28,7 +28,7 @@
                                 </tr>
                             </thead>
                             <tbody id="tbody">
-                                <tr id="user_1">
+                                <tr>
                                     <td>1</td>
                                     <td>admin</td>
                                     <td>admin</td>
@@ -41,7 +41,7 @@
                                         <li class="glyphicon glyphicon-remove" id="delete" onclick="delete_user(this)"></li>
                                     </td>
                                 </tr>
-                                <tr id="user_2">
+                                <tr>
                                     <td>2</td>
                                     <td>user1</td>
                                     <td>user1</td>
@@ -66,34 +66,33 @@
                                              <h4 class="modal-title" id="myModalLabel">新增</h4>
                                     </div>
                                     <form name="add">
-                                    <div class="modal-body">
-                                        <div class="form-group">
-                                            <label for="txt_departmentname">用户名</label>
-                                            <input type="text" name="txt_username" class="form-control" id="txt_username" placeholder="英文或数字，最多10位">
+                                        <div class="modal-body">
+                                            <div class="form-group">
+                                                <label for="txt_departmentname">用户名</label>
+                                                <input type="text" name="txt_username" class="form-control" id="txt_username" placeholder="英文或数字，最多10位">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="txt_parentdepartment">密码</label>
+                                                <input type="text" name="txt_password" class="form-control" id="txt_password" placeholder="最多16位">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="txt_departmentlevel">头像</label>
+                                                <input type="text" name="txt_avatar" class="form-control" id="txt_avatar" placeholder="">
+                                            </div>
+                                            <div class="form-group">
+                                              <label for="txt_statu">角色</label>
+                                              <input type="text" name="txt_role" class="form-control" id="txt_role" placeholder="ordinary or warden">
+                                            </div>
+                                            <div class="form-group">
+                                              <label for="txt_statu">简介</label>
+                                              <input type="text" name="txt_info" class="form-control" id="txt_info" placeholder="50字以内描述">
+                                            </div>
                                         </div>
-                                        <div class="form-group">
-                                            <label for="txt_parentdepartment">密码</label>
-                                            <input type="text" name="txt_password" class="form-control" id="txt_password" placeholder="最多16位">
+                                        <div class="modal-footer">
+                                              <button type="button" class="btn btn-default" data-dismiss="modal"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span>关闭</button>
+                                              <button type="button" id="submit" class="btn btn-primary"><span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span>保存</button>
                                         </div>
-                                        <div class="form-group">
-                                            <label for="txt_departmentlevel">头像</label>
-                                            <input type="text" name="txt_avatar" class="form-control" id="txt_avatar" placeholder="">
-                                        </div>
-                                        <div class="form-group">
-                                          <label for="txt_statu">角色</label>
-                                          <input type="text" name="txt_role" class="form-control" id="txt_role" placeholder="ordinary or warden">
-                                        </div>
-                                        <div class="form-group">
-                                          <label for="txt_statu">简介</label>
-                                          <input type="text" name="txt_info" class="form-control" id="txt_info" placeholder="50字以内描述">
-                                        </div>
-                                    </div>
-
-                                    <div class="modal-footer">
-                                          <button type="button" class="btn btn-default" data-dismiss="modal"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span>关闭</button>
-                                          <button type="button" id="submit_add" class="btn btn-primary" data-dismiss="modal"><span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span>保存</button>
-                                    </div>
-                                        </form>
+                                    </form>
                                 </div>
                              </div>
                         </div>
@@ -108,15 +107,17 @@
 {#    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/x-editable/dist/bootstrap-editable/css/bootstrap-editable.css') }}">#}
 {% endblock %}
 {% block script %}
-    <script src="/static/vendor/bootstrap-table/dist/locale/bootstrap-table-zh-CN.js"></script>
     <script src="/static/vendor/jQuery-Smart-Wizard/js/jquery.smartWizard.js"></script>
     <script>
+        var edit_obj = null;
         function delete_user(this_object) {
-            tbody = document.getElementById('tbody');
-            tr = this_object.parentNode.parentNode;
+            var tbody = document.getElementById('tbody');
+            var tr = this_object.parentNode.parentNode;
             tbody.removeChild(tr);
         }
+
         function edit_user(this_object) {
+            edit_obj = this_object;
             $("#myModalLabel").text("编辑");
             $('#myModal').modal();
             $("#txt_username").val(this_object.parentNode.parentNode.childNodes[3].innerText);
@@ -130,35 +131,105 @@
             $("#myModalLabel").text("新增");
             $('#myModal').modal();
         });
-        $("#submit_add").click(function () {
-            var tbody = document.getElementById('tbody');
-            var username = document.getElementById('txt_username').value;
-            var password = document.getElementById('txt_password').value;
-            var avatar = document.getElementById('txt_avatar').value;
-            var role = document.getElementById('txt_role').value;
-            var info = document.getElementById('txt_info').value;
-            var tr = document.createElement('tr');
-            var username_td = document.createElement('td');
-            username_td.innerText = username;
-            var password_td = document.createElement('td');
-            password_td.innerText = password;
-            var time_td = document.createElement('td');
-            time_td.innerText = "2017-05-06 14:12:32";
-            var role_td = document.createElement('td');
-            role_td.innerText = role;
-            var info_td = document.createElement('td');
-            info_td.innerText = info;
-{#            alert(password);#}
-            var index_td = document.createElement('td');
-            index_td.innerText = parseInt(tbody.firstChild.innerText) + 1;
-            tr.appendChild(index_td);
-            tr.appendChild(username_td);
-            tr.appendChild(password_td);
-            tr.appendChild(time_td);
-            tr.appendChild(role_td);
-            tr.appendChild(info_td);
-{#            tr.appendChild(document.getElementById('tbody').lastElementChild.lastElementChild);#}
-            tbody.appendChild(tr);
-        })
+        $("#submit").click(function() {
+            if($("#myModalLabel").text() === '新增') {
+                 toastr.options = {
+                     'positionClass': 'toast-top-center',
+                     'debug': false
+                 };
+                var tbody = document.getElementById('tbody');
+                var username = document.getElementById('txt_username').value;
+                var password = document.getElementById('txt_password').value;
+                var avatar = document.getElementById('txt_avatar').value;
+                var role = document.getElementById('txt_role').value;
+                var info = document.getElementById('txt_info').value;
+                var tr = document.createElement('tr');
+                // 校验输入
+                if(username.length === 0 || username.length > 10) {
+                    toastr.error('用户名非法');
+                    username.value = '';
+                    username.focus();
+                    return;
+                }
+                if(password.length === 0 || password.length > 16) {
+                    toastr.error('密码非法');
+                    password.value = '';
+                    password.focus();
+                    return;
+                }
+                if(role.length === 0) {
+                    toastr.error('角色非法,不允许为空');
+                    role.value = '';
+                    role.focus();
+                    return;
+                }
+                if(role !== 'warden' && role !== 'ordinary') {
+                    toastr.error('角色非法,只允许为`warden`或`ordinary`');
+                    role.value = '';
+                    role.focus();
+                    return;
+                }
+                // 发送ajax请求写入数据库
+                $.ajax({
+                    data: JSON.stringify({'type': 'submit_load', 'node': select_node, 'files_name': files_name}),
+                    dataType: 'json',
+                    type: 'POST',
+                    contentType: 'application/json; charset=UTF-8',
+                    sync: true,
+                    url: '{{ url_for('get_load_info') }}',
+                    success: function (resful, status) {
+                        if(status) {
+                            if(resful.load_file_status === 'success') {
+                                button.innerText = '加载';
+                                button.removeAttribute('disabled');
+                                toastr.info('请求已提交,请关注顶端消息通知');
+                            }
+                            else {
+                                toastr.info('上一次请求未完成,请关注顶端消息');
+                                button.innerText = '加载';
+                                button.removeAttribute('disabled');
+                            }
+                        }
+                    }
+                });
+                var username_td = document.createElement('td');
+                username_td.innerText = username;
+                var password_td = document.createElement('td');
+                password_td.innerText = password;
+                var time_td = document.createElement('td');
+                time_td.innerText = "2017-05-06 14:12:32";
+                var role_td = document.createElement('td');
+                role_td.innerText = role;
+                var info_td = document.createElement('td');
+                info_td.innerText = info;
+                var index_td = document.createElement('td');
+                index_td.innerText = parseInt(tbody.lastElementChild.firstElementChild.innerText) + 1;
+                var button_td = document.createElement('td');
+                button_td.innerHTML = '<li class="glyphicon glyphicon-pencil" id="edit" onclick="edit_user(this)"></li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<li class="glyphicon glyphicon-remove" onclick="delete_user(this)"></li>';
+                tr.appendChild(index_td);
+                tr.appendChild(username_td);
+                tr.appendChild(password_td);
+                tr.appendChild(time_td);
+                tr.appendChild(role_td);
+                tr.appendChild(info_td);
+                tr.appendChild(button_td);
+                tbody.appendChild(tr);
+                clean_input();
+            }
+            else if($("#myModalLabel").text() === '编辑') {
+                edit_obj.parentNode.parentNode.childNodes[5].innerText = document.getElementById('txt_password').value;
+                edit_obj.parentNode.parentNode.childNodes[11].innerText = document.getElementById('txt_info').value;
+                clean_input();
+            }
+            $('#myModal').modal('hide');
+        });
+
+        function clean_input() {
+            document.getElementById('txt_username').value = '';
+            document.getElementById('txt_password').value = '';
+            document.getElementById('txt_avatar').value = '';
+            document.getElementById('txt_role').value = '';
+            document.getElementById('txt_info').value = '';
+        }
     </script>
 {% endblock %}

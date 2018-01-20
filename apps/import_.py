@@ -10,10 +10,10 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 sys.path.append('../')
 from base import *
-from tool import Tools
 from flask import render_template, redirect, session, url_for, request
 from tool import Event
 from tool import Message
+from tool import Tools
 
 
 ALLOWED_EXTENSIONS = set(['tar'])
@@ -41,7 +41,8 @@ def import_file():
         upload_folder = app.config['UPLOAD_FOLDER']
         if os.path.exists(upload_folder):
             shutil.rmtree(upload_folder)
-            os.makedirs(upload_folder)
+        os.makedirs(upload_folder)
+        print upload_folder
         return render_template('import-file.html')
     else:
         file_obj = request.files
@@ -94,24 +95,14 @@ def get_import_info():
     received = request.get_json()
     info = {'node_list': [], 'image_file_list': []}
     master_node_ip = Sys.query.filter().first().master_node
-    # if received.get('type') == 'node_list':
-    #     # Get all node
-    #     if 'username' in session:
-    #         user_role = User.query.filter(User.username == session.get('username')).first().role
-    #         # Only when the current user's role is warden, the IP address of the master node will be displayed in the
-    #         # previous section.
-    #         if user_role == 'warden' and received.get('master'):
-    #             info['node_list'] = Tools.get_connect_node().get_ip_list(master=True)
-    #         else:
-    #             info['node_list'] = Tools.get_connect_node().get_ip_list(master=False)
     # Get image file list
     if received.get('type') == 'image_file_list':
-        info['image_file_list'] = Tools.get_connect_node().get_image_file_list(master_node_ip)
+        info['image_file_list'] = Tools.get_image_file_list(master_node_ip)
     # Import image file from master node
     elif received.get('type') == 'submit_port':
         node_list = received.get('node_list')
         files_name = received.get('files_name')
-        info['image_file_list'] = Tools.get_connect_node().get_image_file_list(master_node_ip)
+        info['image_file_list'] = Tools.get_image_file_list(master_node_ip)
         if not check_thread_busy('port'):
             thread_import_port_running = threading.Thread(target=import_image_file,
                                                           args=('port', node_list, files_name, session['username']),
@@ -171,7 +162,6 @@ def import_image_file(import_type, node_ip_list, files_name, username):
     while connect_node.flush_status:
         pass
     master_ip = Sys.query.filter().first().master_node
-    master_ip_info = connect_node.get_ip_attr(master_ip, 'info')
     if import_type == 'port':
         sou_path = connect_node.get_ip_attr(master_ip, 'dir')
     else:
@@ -184,9 +174,13 @@ def import_image_file(import_type, node_ip_list, files_name, username):
         node_username = connect_node.get_ip_attr(node, 'username')
         node_ip_path = connect_node.get_ip_attr(node, 'dir')
         for file_name in files_name:
+            # 转移'/'
+            if '/' in file_name:
+                file_name = file_name.replace('/', '_')
             cmd = import_master_cmd.format(sou_path=sou_path, file=file_name,
                                            node_username=node_username, node_ip_path=node_ip_path, node_ip=node)
-            result = connect_node.cmd(master_ip_info, cmd)
+            print cmd
+            result = connect_node.cmd(master_ip, cmd)
             exec_status.append(result[1])
     connect_node.bool_flush = True
     if 'defeated' in exec_status:

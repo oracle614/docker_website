@@ -20,16 +20,20 @@ def get_common_info():
             # Only when the current user's role is warden, the IP address of the master node will be displayed in the
             # previous section.
             if user_role == 'warden' and master:
-                info['node_list'] = Tools.get_connect_node().get_ip_list(master=True, available=available)
+                info['node_list'] = Tools.get_ip_list(master=True, available=available)
             else:
-                info['node_list'] = Tools.get_connect_node().get_ip_list(master=False, available=available)
+                info['node_list'] = Tools.get_ip_list(master=False, available=available)
     elif received.get('type') == 'image_file_list':
         if 'username' in session:
             recent_time = received.get('recent_time')
             node = received.get('node')
-            info['image_file_list'] = Tools.get_connect_node().get_image_file_list(node, recent_time=recent_time)
+            info['image_file_list'] = Tools.get_image_file_list(node, recent_time=recent_time)
     elif received.get('type') == 'image_docker_list':
         if 'username' in session:
             node = received.get('node')
-            info['image_docker_list'] = Tools.get_connect_node().get_docker_image_list(node)
+            container_status = received.get('status')
+            # print container_status
+            # print Tools.get_docker_image_list(node, status=container_status)
+            info['image_docker_list'] = Tools.get_docker_image_list(node, status=container_status)
+    print info
     return json.dumps(info)

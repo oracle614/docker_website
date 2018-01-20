@@ -1,3 +1,4 @@
+#!coding:utf-8
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -17,6 +18,11 @@ from apps.common import *
 from config import MESSAGE_NUMBER
 
 
+@app.route('/get/more/')
+def get_more():
+    return render_template('test_more.html')
+
+
 @app.route('/head/user/', methods=['POST'])
 def get_head_user_info():
     """
@@ -31,16 +37,20 @@ def get_head_user_info():
     return json.dumps(user_info)
 
 
-@app.route('/head/message/', methods=['POST', 'GET'])
+@app.route('/head/message/', methods=['POST'])
 def get_message_info():
     """
-    Response to front-end message requests.
-    content: Message content;
-    status: The message is new or old;
-    new_number: Number of new messages.
-    :return: If login:{'content': '', 'status': '', 'new_number': ''}; else: {}
+    响应前台请求
+    前端返回{'read_status': values, 'ids': []} values值为bool型 ids值为已读消息编号
+    :return: 登录时返回:{'content': [{'info': ,''grade: ,'message_id': , 'message_status'}, {}], 'status': '', 'new_number': ''}; else: {}
     """
     if 'username' in session:
+        request_info = request.get_json()
+        read_status = request_info.get('read_status')
+        ids = request_info.get('ids')
+        if read_status:
+            # 标记为已读
+            Message.mark_true(session['username'], ids)
         username = session['username']
         messages = Message.get_message(username, MESSAGE_NUMBER)
         # Message id, to identify whether there is new message.
