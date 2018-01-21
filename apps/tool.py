@@ -539,6 +539,21 @@ class Tools(object):
         return info
 
     @staticmethod
+    def get_user_info_list():
+        """返回用户信息列表
+        # 顺序 id-用户名-密码-邮箱-创建日期-角色-简介
+        :return: [[id, username, password, email, create_time, role, info], ...]
+        """
+        users = User.query.filter().all()
+        info = []
+        ids = 0
+        for user in users:
+            ids += 1
+            info.append([ids, user.username, user.password, user.email, user.createtime.strftime('%Y-%m-%d %H:%M:%S'),
+                         user.role, user.info])
+        return info
+
+    @staticmethod
     def _get_container_image(ip):
         """返回该节点所有容器依赖的镜像
         基本思路：

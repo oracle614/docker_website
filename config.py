@@ -27,3 +27,5 @@ NODE_TMP_IMAGE_FOLDER = '/tmp/dockerImage'
 
 MESSAGE_NUMBER = 5
 EVENT_NUMBER = 10
+
+DEFAULT_AVATAR_PATH = '/static/img/user1.png'
