@@ -17,6 +17,9 @@ def load_file():
         return render_template('page-login.html')
     elif 'lock_stat' in session:
         return redirect(url_for('lock'))
+    nodes = Node.query.filter().all()
+    if len(nodes) == 0:
+        return redirect(url_for('sys_set'))
     return render_template('load-file.html')
 
 

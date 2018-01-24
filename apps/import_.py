@@ -27,6 +27,9 @@ def import_port():
         return render_template('page-login.html')
     elif 'lock_stat' in session:
         return redirect(url_for('lock'))
+    nodes = Node.query.filter().all()
+    if len(nodes) == 0:
+        return redirect(url_for('sys_set'))
     return render_template('import-port.html')
 
 
@@ -36,6 +39,9 @@ def import_file():
         return render_template('page-login.html')
     elif 'lock_stat' in session:
         return redirect(url_for('lock'))
+    nodes = Node.query.filter().all()
+    if len(nodes) == 0:
+        return redirect(url_for('sys_set'))
     if request.method == 'GET':
         # Clear upload file
         upload_folder = app.config['UPLOAD_FOLDER']

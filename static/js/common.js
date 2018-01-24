@@ -1,3 +1,6 @@
+/*
+* 确认提示
+* */
 (function ($) {
     window.Ewin = function () {
         var html = '<div id="[Id]" class="modal fade" role="dialog" aria-labelledby="modalLabel">' +

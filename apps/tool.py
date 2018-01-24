@@ -2,6 +2,7 @@
 import paramiko
 import os, threading, datetime, logging, time, sys
 import re
+import MySQLdb
 reload(sys)
 sys.setdefaultencoding('utf8')
 sys.path.append('../')
@@ -47,8 +48,10 @@ class ConnectNode(object):
             Get the cluster node information from the database and write it to self.nodes_info
         :return:node_info format: [(ip, port, username, password, dir, master),....]
         """
+        # 注： 此处使用flask_query存在ip无法及时更新的bug
         # Get node info from DB
         nodes = Node.query.filter().all()
+        # print nodes
         nodes_info = []
         for node in nodes:
             ip = str(node.ip)
@@ -551,6 +554,22 @@ class Tools(object):
             ids += 1
             info.append([ids, user.username, user.password, user.email, user.createtime.strftime('%Y-%m-%d %H:%M:%S'),
                          user.role, user.info])
+        return info
+
+    @staticmethod
+    def get_sys_info_list():
+        """返回本集群系统信息
+        # 顺序 id-ip-端口-账户-密码-镜像文件位置-是否是主节点
+        :return:
+        """
+        sys_infos = Node.query.filter().all()
+        info = []
+        ids = 0
+        for sys_info in sys_infos:
+            ids += 1
+            bool_master = Tools.get_connect_node().get_ip_attr(sys_info.ip, 'master')
+            info.append([ids, sys_info.ip, int(sys_info.port), sys_info.username,
+                         sys_info.password, sys_info.image_dir, bool_master])
         return info
 
     @staticmethod

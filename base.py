@@ -25,8 +25,8 @@ class User(db.Model):
 # node set table
 class Sys(db.Model):
     __tablename__ = 'sys_set'
-    image_dir = db.Column(db.String(50), nullable=False, primary_key=True)
-    master_node = db.Column(db.String(20), nullable=False)
+    # image_dir = db.Column(db.String(50), nullable=False, primary_key=True)
+    master_node = db.Column(db.String(20), nullable=False, primary_key=True)
 
 
 # node set table
@@ -36,7 +36,8 @@ class Node(db.Model):
     port = db.Column(db.Integer)
     username = db.Column(db.String(20), nullable=False)
     password = db.Column(db.String(20), nullable=False)
-    image_dir = db.Column(db.String(50), db.ForeignKey('sys_set.image_dir'), nullable=False)
+    image_dir = db.Column(db.String(50), nullable=False)
+    # image_dir = db.Column(db.String(50), db.ForeignKey('sys_set.image_dir'), nullable=False)
 
 
 # event table

@@ -122,22 +122,79 @@
                 }
             });
         });
+
         function delete_user(this_object) {
+            // 验证方式采用 前端确认+ 后台验证方式
+            // 提示确认
+            window.Ewin.confirm({message: '确定删除么?', title: '删除确认'}).on(function (e) {
+                    if(!e) {
+                        return;
+                    }
+                    else {
+                        var username = this_object.parentNode.parentNode.childNodes[1].innerHTML;
+                        $.ajax({
+                            data: JSON.stringify({'type': 'user_del', 'username': username}),
+                            dataType: 'json',
+                            type: 'POST',
+                            contentType: 'application/json; charset=UTF-8',
+                            url: '{{ url_for('get_user_info') }}',
+                            success: function (resful, status) {
+                                if(status) {
+                                    if(resful.user_del_status === 'success') {
+                                        toastr.info('删除成功');
+                                        // 为追求统一,此处采用重构前端表格方式删除
+                                        make_form(resful.user_info_list);
+                                    }
+                                    else {
+                                        toastr.error(resful.user_del_err_reason);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            /*通过dom删除
             var tbody = document.getElementById('tbody');
             var tr = this_object.parentNode.parentNode;
-            tbody.removeChild(tr);
+            tbody.removeChild(tr);*/
         }
 
         function edit_user(this_object) {
             edit_obj = this_object;
+            var username = this_object.parentNode.parentNode.childNodes[1].innerText;
+            // 通过ajax指定值
+            $.ajax({
+                data: JSON.stringify({'type': 'get_user_info', 'username': username}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_user_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        if(resful.get_user_status === 'success') {
+                            $("#txt_username").val(resful.get_user_info.username);
+                            $("#txt_username").attr("disabled","disabled");
+                            $("#txt_password").val(resful.get_user_info.password);
+                            $("#txt_role").val(resful.get_user_info.role);
+                            $("#txt_role").attr("disabled","disabled");
+                            $("#txt_info").val(resful.get_user_info.info);
+                            $("#txt_email").val(resful.get_user_info.email);
+                            $("#txt_avatar").val(resful.get_user_info.avatar);
+                        }
+                    }
+                }
+            });
             $("#myModalLabel").text("编辑");
             $('#myModal').modal();
-            $("#txt_username").val(this_object.parentNode.parentNode.childNodes[3].innerText);
+            /*通过DOM指定值
+            $("#txt_username").val(this_object.parentNode.parentNode.childNodes[1].innerText);
             $("#txt_username").attr("disabled","disabled");
-            $("#txt_password").val(this_object.parentNode.parentNode.childNodes[5].innerText);
-            $("#txt_role").val(this_object.parentNode.parentNode.childNodes[9].innerText);
+            $("#txt_password").val(this_object.parentNode.parentNode.childNodes[2].innerText);
+            $("#txt_role").val(this_object.parentNode.parentNode.childNodes[5].innerText);
             $("#txt_role").attr("disabled","disabled");
-            $("#txt_info").val(this_object.parentNode.parentNode.childNodes[11].innerText);
+            $("#txt_info").val(this_object.parentNode.parentNode.childNodes[6].innerText);
+            $("#txt_email").val(this_object.parentNode.parentNode.childNodes[3].innerText)
+            */
         }
         // 给添加按钮追加事件
         $("#add").click(function () {
@@ -148,50 +205,21 @@
 
         // 给保存按钮追加时间
         $("#submit").click(function() {
-            if($("#myModalLabel").text() === '新增') {
-                 toastr.options = {
+            toastr.options = {
                      'positionClass': 'toast-top-center',
                      'debug': false
                  };
-                var tbody = document.getElementById('tbody');
-                var username_obj = document.getElementById('txt_username');
-                var password_obj = document.getElementById('txt_password');
-                var avatar_obj = document.getElementById('txt_avatar');
-                var role_obj = document.getElementById('txt_role');
-                var info_obj = document.getElementById('txt_info');
-                var email_obj = document.getElementById('txt_email');
-                var tr = document.createElement('tr');
-                // 校验输入
-                if(username_obj.value.length === 0 || username_obj.value.length > 10) {
-                    toastr.error('用户名非法');
-                    username_obj.value = '';
-                    username_obj.focus();
-                    return;
-                }
-                if(password_obj.value.length === 0 || password_obj.value.length > 16) {
-                    toastr.error('密码非法');
-                    password_obj.value = '';
-                    password_obj.focus();
-                    return;
-                }
-                if(role_obj.value.length === 0) {
-                    toastr.error('角色非法,不允许为空');
-                    role_obj.value = '';
-                    role_obj.focus();
-                    return;
-                }
-                if(role_obj.value !== 'warden' && role_obj.value !== 'ordinary') {
-                    toastr.error('角色非法,只允许为`warden`或`ordinary`');
-                    role_obj.value = '';
-                    role_obj.focus();
-                    return;
-                }
-                if(info_obj.value.length > 50) {
-                    toastr.error();
-                    info_obj.value = '';
-                    info_obj.focus();
-                    return;
-                }
+            var tbody = document.getElementById('tbody');
+            var username_obj = document.getElementById('txt_username');
+            var password_obj = document.getElementById('txt_password');
+            var avatar_obj = document.getElementById('txt_avatar');
+            var role_obj = document.getElementById('txt_role');
+            var info_obj = document.getElementById('txt_info');
+            var email_obj = document.getElementById('txt_email');
+            // 校验输入
+            if(! check_input())
+                return;
+            if($("#myModalLabel").text() === '新增') {
                 // 发送ajax请求写入数据库,同步请求
                 $.ajax({
                     data: JSON.stringify({'type': 'user_add', 'username': username_obj.value, 'password': password_obj.value,
@@ -239,8 +267,31 @@
                 clean_input();
             }
             else if($("#myModalLabel").text() === '编辑') {
-                edit_obj.parentNode.parentNode.childNodes[5].innerText = document.getElementById('txt_password').value;
-                edit_obj.parentNode.parentNode.childNodes[11].innerText = document.getElementById('txt_info').value;
+                // 发送ajax请求写入数据库,同步请求
+                $.ajax({
+                    data: JSON.stringify({'type': 'user_edit', 'username': username_obj.value, 'password': password_obj.value,
+                        'role': role_obj.value, 'avatar': avatar_obj.value, 'info': info_obj.value, 'email': email_obj.value}),
+                    dataType: 'json',
+                    type: 'POST',
+                    contentType: 'application/json; charset=UTF-8',
+                    url: '{{ url_for('get_user_info') }}',
+                    success: function (resful, status) {
+                        if(status) {
+                            if(resful.user_edit_status === 'success') {
+                                // 若修改的为密码,重新登录
+                                if(resful.go_login_page) {
+                                    window.location.href = "{{ url_for('login') }}";
+                                }
+                                else
+                                    // 制表
+                                    make_form(resful.user_info_list);
+                            }
+                            else {
+                                toastr.error('请求失败');
+                            }
+                        }
+                    }
+                });
                 clean_input();
             }
             $('#myModal').modal('hide');
@@ -275,6 +326,48 @@
             document.getElementById('txt_role').value = '';
             document.getElementById('txt_info').value = '';
             document.getElementById('txt_email').value = '';
+        }
+        // 校验输入
+        function check_input() {
+            var username_obj = document.getElementById('txt_username');
+            var password_obj = document.getElementById('txt_password');
+            var avatar_obj = document.getElementById('txt_avatar');
+            var role_obj = document.getElementById('txt_role');
+            var info_obj = document.getElementById('txt_info');
+            var email_obj = document.getElementById('txt_email');
+            var tr = document.createElement('tr');
+            // 校验输入
+            if(username_obj.value.length === 0 || username_obj.value.length > 10) {
+                toastr.error('用户名非法');
+                username_obj.value = '';
+                username_obj.focus();
+                return false;
+            }
+            if(password_obj.value.length === 0 || password_obj.value.length > 16) {
+                toastr.error('密码非法');
+                password_obj.value = '';
+                password_obj.focus();
+                return false;
+            }
+            if(role_obj.value.length === 0) {
+                toastr.error('角色非法,不允许为空');
+                role_obj.value = '';
+                role_obj.focus();
+                return false;
+            }
+            if(role_obj.value !== 'warden' && role_obj.value !== 'ordinary') {
+                toastr.error('角色非法,只允许为`warden`或`ordinary`');
+                role_obj.value = '';
+                role_obj.focus();
+                return false;
+            }
+            if(info_obj.value.length > 50) {
+                toastr.error();
+                info_obj.value = '';
+                info_obj.focus();
+                return false;
+            }
+            return true;
         }
     </script>
 {% endblock %}

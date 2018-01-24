@@ -18,47 +18,17 @@
                         <table class="table table-condensed">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>序号</th>
                                     <th>IP</th>
-                                    <th>Port</th>
-                                    <th>Username</th>
-                                    <th>Password</th>
-                                    <th>Image File</th>
+                                    <th>端口</th>
+                                    <th>账户</th>
+                                    <th>密码</th>
+                                    <th>镜像位置</th>
                                     <th>Master</th>
-                                    <td>Operator</td>
+                                    <th>操作</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody">
-                                <tr id="user_1">
-                                    <td>1</td>
-                                    <td>10.42.0.74</td>
-                                    <td>22</td>
-                                    <td>pirate</td>
-                                    <td>hypriot</td>
-                                    <td>/home/pirate/imageDir</td>
-                                    <td><input type="radio" name="select_master"></td>
-                                    <td>
-                                        <li class="glyphicon glyphicon-pencil"></li>
-                                        &nbsp;&nbsp;&nbsp;
-                                        <li class="glyphicon glyphicon-remove" id="delete" onclick="delete_user(this)"></li>
-                                    </td>
-                                </tr>
-                                <tr id="user_2">
-                                    <td>2</td>
-                                    <td>10.42.0.75</td>
-                                    <td>22</td>
-                                    <td>pirate</td>
-                                    <td>hypriot</td>
-                                    <td>/home/pirate/imageDir</td>
-                                    <td><input type="radio" name="select_master"></td>
-                                    <td id="finally">
-                                        <li class="glyphicon glyphicon-pencil"></li>
-                                        &nbsp;&nbsp;&nbsp;
-                                        <li class="glyphicon glyphicon-remove" onclick="delete_user(this)"></li>
-                                        &nbsp;&nbsp;&nbsp;
-                                        <li class="glyphicon glyphicon-plus" id="add"></li>
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
                         <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
@@ -72,33 +42,47 @@
                                     <div class="modal-body">
                                         <div class="form-group">
                                             <label for="txt_departmentlevel">IP</label>
-                                            <input type="text" name="txt_avatar" class="form-control" id="txt_avatar" placeholder="">
+                                            <input type="text" name="txt_ip" class="form-control" id="txt_ip" placeholder="点分十进制表示">
                                         </div>
                                         <div class="form-group">
                                             <label for="txt_departmentlevel">端口</label>
-                                            <input type="text" name="txt_avatar" class="form-control" id="txt_avatar" placeholder="">
+                                            <input type="text" name="txt_port" class="form-control" id="txt_port" placeholder="SSH端口,默认22">
                                         </div>
                                         <div class="form-group">
-                                            <label for="txt_departmentname">用户名</label>
-                                            <input type="text" name="txt_username" class="form-control" id="txt_username" placeholder="英文或数字，最多10位">
+                                            <label for="txt_departmentname">账户</label>
+                                            <input type="text" name="txt_account" class="form-control" id="txt_account" placeholder="英文或数字，最多10位">
                                         </div>
                                         <div class="form-group">
                                             <label for="txt_parentdepartment">密码</label>
                                             <input type="text" name="txt_password" class="form-control" id="txt_password" placeholder="最多16位">
                                         </div>
                                         <div class="form-group">
-                                          <label for="txt_statu">镜像目录</label>
-                                          <input type="text" name="txt_role" class="form-control" id="txt_role" placeholder="">
+                                          <label for="txt_statu">镜像位置</label>
+                                          <input type="text" name="txt_position" class="form-control" id="txt_position" placeholder="请填写完整路径">
                                         </div>
                                     </div>
 
                                     <div class="modal-footer">
                                           <button type="button" class="btn btn-default" data-dismiss="modal"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span>关闭</button>
-                                          <button type="button" id="submit_add" class="btn btn-primary" data-dismiss="modal"><span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span>保存</button>
+                                          <button type="button" id="submit" class="btn btn-primary"><span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span>保存</button>
                                     </div>
                                         </form>
                                 </div>
                              </div>
+                        </div>
+                    </div>
+                    <div class="panel-footer">
+                        <div class="form-group">
+                            <form class="form-horizontal">
+                                <div class="row">
+                                    <div class="col-md-11" id="div_space"> </div>
+                                    <div class="col-md-1" id="div_button">
+                                        <button class="btn btn-primary" type="button" id="add">
+                                            添加
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -114,42 +98,209 @@
     <script src="/static/vendor/bootstrap-table/dist/locale/bootstrap-table-zh-CN.js"></script>
     <script src="/static/vendor/jQuery-Smart-Wizard/js/jquery.smartWizard.js"></script>
     <script>
-        function delete_user(this_object) {
-            tbody = document.getElementById('tbody');
-            tr = this_object.parentNode.parentNode;
-            tbody.removeChild(tr);
-        }
+        $(document).ready(function () {
+            // 发送ajax请求节点信息
+            $.ajax({
+                data: JSON.stringify({'type': 'sys_info'}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_sys_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        if(resful.sys_info_status === 'success') {
+                            // 制表
+                            make_form(resful.sys_info_list);
+                        }
+                        else {
+                            toastr.error('请求失败');
+                        }
+                    }
+                }
+            });
+        });
+
+        // 给添加按钮追加事件
         $("#add").click(function () {
             $("#myModalLabel").text("新增");
             $('#myModal').modal();
+            document.getElementById('txt_ip').focus();
         });
-        $("#submit_add").click(function () {
+
+        // 编辑按钮追加事件
+        function edit_sys(this_object) {
+            edit_obj = this_object;
+            var ip = this_object.parentNode.parentNode.childNodes[1].innerText;
+            // 通过ajax指定值
+            $.ajax({
+                data: JSON.stringify({'type': 'get_sys_info', 'ip': ip}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_sys_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        if(resful.get_sys_status === 'success') {
+                            $("#txt_ip").val(resful.get_sys_info.ip);
+                            $("#txt_port").val(resful.get_sys_info.port);
+                            $("#txt_account").val(resful.get_sys_info.account);
+                            $("#txt_password").val(resful.get_sys_info.password);
+                            $("#txt_position").val(resful.get_sys_info.position);
+                        }
+                    }
+                }
+            });
+            $("#myModalLabel").text("编辑");
+            $('#myModal').modal();
+            /*通过DOM指定值
+            $("#txt_username").val(this_object.parentNode.parentNode.childNodes[1].innerText);
+            $("#txt_username").attr("disabled","disabled");
+            $("#txt_password").val(this_object.parentNode.parentNode.childNodes[2].innerText);
+            $("#txt_role").val(this_object.parentNode.parentNode.childNodes[5].innerText);
+            $("#txt_role").attr("disabled","disabled");
+            $("#txt_info").val(this_object.parentNode.parentNode.childNodes[6].innerText);
+            $("#txt_email").val(this_object.parentNode.parentNode.childNodes[3].innerText)
+            */
+        }
+        // 删除
+        function delete_sys(this_object) {
+            // 验证方式采用 前端确认+ 后台验证方式
+            // 提示确认
+            window.Ewin.confirm({message: '确定删除么?', title: '删除确认'}).on(function (e) {
+                    if(!e) {
+                        return;
+                    }
+                    else {
+                        var ip = this_object.parentNode.parentNode.childNodes[1].innerHTML;
+                        $.ajax({
+                            data: JSON.stringify({'type': 'sys_del', 'ip': ip}),
+                            dataType: 'json',
+                            type: 'POST',
+                            contentType: 'application/json; charset=UTF-8',
+                            url: '{{ url_for('get_sys_info') }}',
+                            success: function (resful, status) {
+                                if(status) {
+                                    if(resful.sys_del_status === 'success') {
+                                        toastr.info('删除成功');
+                                        // 为追求统一,此处采用重构前端表格方式删除
+                                        make_form(resful.sys_info_list);
+                                    }
+                                    else {
+                                        toastr.error(resful.sys_del_err_reason);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            /*通过dom删除
             var tbody = document.getElementById('tbody');
-            var username = document.getElementById('txt_username').value;
-            var password = document.getElementById('txt_password').value;
-            var avatar = document.getElementById('txt_avatar').value;
-            var role = document.getElementById('txt_role').value;
-            var info = document.getElementById('txt_info').value;
-            var tr = document.createElement('tr');
-            var username_td = document.createElement('td');
-{#            username_id.innerText = username;#}
-            alert('wds');
-            var password_td = document.createElement('td');
-{#            password_id.innerText = password;#}
-            var time_td = document.createElement('td');
-{#            time_id.innerText = "";#}
-            var role_td = document.createElement('td');
-{#            role_id.innerText = role;#}
-            var info_td = document.createElement('td');
-{#            info_id.innerText = info;#}
-{#            alert(password);#}
-            tr.appendChild(username_td);
-            tr.appendChild(password_td);
-            tr.appendChild(time_td);
-            tr.appendChild(role_td);
-            tr.appendChild(info_td);
-{#            tr.appendChild(document.getElementById('tbody').lastElementChild.lastElementChild);#}
-            tbody.appendChild(tr);
-        })
+            var tr = this_object.parentNode.parentNode;
+            tbody.removeChild(tr);*/
+        }
+
+        // 生成表格
+        function make_form(form_objs) {
+            var tbody_obj = document.getElementById('tbody');
+            // 清空原始内容
+            tbody_obj.innerHTML = '';
+            // 顺序 id-IP-端口-账户-密码-镜像文件位置-是否是主节点-操作
+            for(var i=0; i<form_objs.length; i++) {
+                var tr = document.createElement('tr');
+                for(var j=0; j<form_objs[i].length; j++) {
+                    var td = document.createElement('td');
+                    if(j === form_objs[i].length - 1) {
+{#                        <td><input type="radio" name="select_master"></td>#}
+                        var input = document.createElement('input');
+                        input.setAttribute('type', 'radio');
+                        input.setAttribute('name', 'select_master');
+                        if(form_objs[i][j]) {
+                            input.checked = true;
+                        }
+                        td.appendChild(input);
+                        tr.appendChild(td);
+                        continue;
+                    }
+                    td.innerText = form_objs[i][j];
+                    tr.appendChild(td);
+                }
+                // 操作
+                var op_td = document.createElement('td');
+                op_td.innerHTML = '<span class="lnr lnr-pencil" onclick="edit_sys(this)"></span>&nbsp;&nbsp;&nbsp;<span onclick="delete_sys(this)" class="lnr lnr-trash"></span>';
+{#                op_td.innerHTML = '<li class="glyphicon glyphicon-pencil" id="edit" onclick="edit_user(this)"></li>&nbsp;&nbsp;&nbsp;<li class="glyphicon glyphicon-remove" id="delete" onclick="delete_user(this)"></li>';#}
+                tr.appendChild(op_td);
+                tbody_obj.appendChild(tr);
+            }
+        }
+        
+        // 给保存按钮追加时间
+        $("#submit").click(function() {
+            toastr.options = {
+                     'positionClass': 'toast-top-center',
+                     'debug': false
+                 };
+            var tbody = document.getElementById('tbody');
+            var ip_obj = document.getElementById('txt_ip');
+            var port_obj = document.getElementById('txt_port');
+            var account_obj = document.getElementById('txt_account');
+            var password_obj = document.getElementById('txt_password');
+            var position_obj = document.getElementById('txt_position');
+            if($("#myModalLabel").text() === '新增') {
+                // 发送ajax请求写入数据库,同步请求
+                $.ajax({
+                    data: JSON.stringify({'type': 'sys_add', 'ip': ip_obj.value, 'port': port_obj.value,
+                        'password': password_obj.value, 'account': account_obj.value, 'position': position_obj.value}),
+                    dataType: 'json',
+                    type: 'POST',
+                    contentType: 'application/json; charset=UTF-8',
+                    url: '{{ url_for('get_sys_info') }}',
+                    success: function (resful, status) {
+                        if(status) {
+                            if(resful.sys_add_status === 'success') {
+                                // 制表
+                                make_form(resful.sys_info_list);
+                            }
+                            else {
+                                toastr.error('请求失败');
+                            }
+                        }
+                    }
+                });
+                clean_input();
+            }
+            else if($("#myModalLabel").text() === '编辑') {
+                // 发送ajax请求写入数据库,同步请求
+                $.ajax({
+                    data: JSON.stringify({'type': 'sys_edit', 'ip': ip_obj.value, 'port': port_obj.value,
+                        'password': password_obj.value, 'account': account_obj.value, 'position': position_obj.value}),
+                    dataType: 'json',
+                    type: 'POST',
+                    contentType: 'application/json; charset=UTF-8',
+                    url: '{{ url_for('get_sys_info') }}',
+                    success: function (resful, status) {
+                        if(status) {
+                            if(resful.sys_edit_status === 'success') {
+                                // 制表
+                                make_form(resful.sys_info_list);
+                            }
+                            else {
+                                toastr.error('请求失败');
+                            }
+                        }
+                    }
+                });
+                clean_input();
+            }
+            $('#myModal').modal('hide');
+        });
+        
+        // 清除输入框
+        function clean_input() {
+            document.getElementById('txt_ip').value = '';
+            document.getElementById('txt_port').value = '';
+            document.getElementById('txt_account').value = '';
+            document.getElementById('txt_password').value = '';
+            document.getElementById('txt_position').value = '';
+        }
     </script>
 {% endblock %}

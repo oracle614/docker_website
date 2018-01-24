@@ -26,6 +26,9 @@ def export_image():
         return render_template('page-login.html')
     elif 'lock_stat' in session:
         return redirect(url_for('lock'))
+    nodes = Node.query.filter().all()
+    if len(nodes) == 0:
+        return redirect(url_for('sys_set'))
     if os.path.exists(DOWNLOAD_FOLDER):
         shutil.rmtree(DOWNLOAD_FOLDER)
         os.makedirs(DOWNLOAD_FOLDER)

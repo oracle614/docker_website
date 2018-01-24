@@ -12,6 +12,7 @@ from apps.rm import *
 from apps.show import *
 from apps.index import *
 from apps.pack import *
+from apps.sys_set import *
 from base import *
 from apps.tool import *
 from apps.common import *
@@ -80,11 +81,6 @@ def get_message_info():
     else:
         info = {}
     return json.dumps(info)
-
-
-@app.route('/sys/')
-def sys_set():
-    return render_template('sys-set.html')
 
 
 # login function
