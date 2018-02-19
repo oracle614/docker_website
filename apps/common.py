@@ -35,5 +35,4 @@ def get_common_info():
             # print container_status
             # print Tools.get_docker_image_list(node, status=container_status)
             info['image_docker_list'] = Tools.get_docker_image_list(node, status=container_status)
-    print info
     return json.dumps(info)

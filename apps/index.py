@@ -15,9 +15,8 @@ def index():
         return redirect(url_for('login'))
     elif 'lock_stat' in session:
         return redirect(url_for('lock'))
-    nodes = Node.query.filter().all()
-    if len(nodes) == 0:
-        return redirect(url_for('sys_set'))
+    # if len(nodes) == 0:
+    #     return redirect(url_for('sys_set'))
     cluster_info = Tools.get_connect_node().cluster_info
     return render_template('index.html', cluster_info=cluster_info)
 

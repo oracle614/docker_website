@@ -26,7 +26,7 @@ def user_set():
     nodes = Node.query.filter().all()
     if len(nodes) == 0:
         return redirect(url_for('sys_set'))
-    return render_template('user-set.html')
+    return render_template('user-set.html', default_avatar_path=DEFAULT_AVATAR_PATH)
 
 
 @app.route('/user/add/', methods=['POST'])
@@ -57,8 +57,10 @@ def get_user_info():
                     result['user_info_list'] = Tools.get_user_info_list()
                 except Exception, e:
                     result['user_add_status'] = 'danger'
+                    result['user_add_err_reason'] = '数据库写入出错'
             else:
                 result['user_add_status'] = 'danger'
+                result['user_add_err_reason'] = '添加失败,请检查数据格式或当前账户权限'
         elif received.get('type') == 'user_info':
             # 顺序 id-用户名-密码-邮箱-创建日期-角色-简介
             users_list = Tools.get_user_info_list()
@@ -131,8 +133,10 @@ def get_user_info():
                     result['user_info_list'] = Tools.get_user_info_list()
                 except Exception, e:
                     result['user_edit_status'] = 'danger'
+                    result['user_edit_err_reason'] = '数据库写入出错'
             else:
                 result['user_edit_status'] = 'danger'
+                result['user_edit_err_reason'] = '添加失败,请检查数据格式或当前账户权限'
     return json.dumps(result)
 
 

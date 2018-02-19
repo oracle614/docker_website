@@ -41,24 +41,24 @@
                                     <form name="add">
                                     <div class="modal-body">
                                         <div class="form-group">
-                                            <label for="txt_departmentlevel">IP</label>
+                                            <label for="txt_ip">IP</label>
                                             <input type="text" name="txt_ip" class="form-control" id="txt_ip" placeholder="点分十进制表示">
                                         </div>
                                         <div class="form-group">
-                                            <label for="txt_departmentlevel">端口</label>
-                                            <input type="text" name="txt_port" class="form-control" id="txt_port" placeholder="SSH端口,默认22">
+                                            <label for="txt_port">端口</label>
+                                            <input type="text" name="txt_port" class="form-control" id="txt_port" placeholder="SSH端口,默认{{ default_set.DEFAULT_NODE_PORT }}">
                                         </div>
                                         <div class="form-group">
-                                            <label for="txt_departmentname">账户</label>
-                                            <input type="text" name="txt_account" class="form-control" id="txt_account" placeholder="英文或数字，最多10位">
+                                            <label for="txt_account">账户</label>
+                                            <input type="text" name="txt_account" class="form-control" id="txt_account" placeholder="节点访问账户,默认{{ default_set.DEFAULT_NODE_ACCOUNT }}">
                                         </div>
                                         <div class="form-group">
-                                            <label for="txt_parentdepartment">密码</label>
-                                            <input type="text" name="txt_password" class="form-control" id="txt_password" placeholder="最多16位">
+                                            <label for="txt_password">密码</label>
+                                            <input type="text" name="txt_password" class="form-control" id="txt_password" placeholder="节点访问密码,默认{{ default_set.DEFAULT_NODE_PASSWORD }}">
                                         </div>
                                         <div class="form-group">
-                                          <label for="txt_statu">镜像位置</label>
-                                          <input type="text" name="txt_position" class="form-control" id="txt_position" placeholder="请填写完整路径">
+                                          <label for="txt_position">镜像位置</label>
+                                          <input type="text" name="txt_position" class="form-control" id="txt_position" placeholder="tar镜像文件存放路径,默认{{ default_set.DEFAULT_IMAGE_FILE_PATH }}">
                                         </div>
                                     </div>
 
@@ -98,6 +98,7 @@
     <script src="/static/vendor/bootstrap-table/dist/locale/bootstrap-table-zh-CN.js"></script>
     <script src="/static/vendor/jQuery-Smart-Wizard/js/jquery.smartWizard.js"></script>
     <script>
+        var edit_obj = null;
         $(document).ready(function () {
             // 发送ajax请求节点信息
             $.ajax({
@@ -124,13 +125,15 @@
         $("#add").click(function () {
             $("#myModalLabel").text("新增");
             $('#myModal').modal();
+            clean_input();
             document.getElementById('txt_ip').focus();
         });
 
         // 编辑按钮追加事件
         function edit_sys(this_object) {
             edit_obj = this_object;
-            var ip = this_object.parentNode.parentNode.childNodes[1].innerText;
+{#            var ip = this_object.parentNode.parentNode.childNodes[1].innerText;#}
+            var ip=this_object.getAttribute('value');
             // 通过ajax指定值
             $.ajax({
                 data: JSON.stringify({'type': 'get_sys_info', 'ip': ip}),
@@ -152,15 +155,6 @@
             });
             $("#myModalLabel").text("编辑");
             $('#myModal').modal();
-            /*通过DOM指定值
-            $("#txt_username").val(this_object.parentNode.parentNode.childNodes[1].innerText);
-            $("#txt_username").attr("disabled","disabled");
-            $("#txt_password").val(this_object.parentNode.parentNode.childNodes[2].innerText);
-            $("#txt_role").val(this_object.parentNode.parentNode.childNodes[5].innerText);
-            $("#txt_role").attr("disabled","disabled");
-            $("#txt_info").val(this_object.parentNode.parentNode.childNodes[6].innerText);
-            $("#txt_email").val(this_object.parentNode.parentNode.childNodes[3].innerText)
-            */
         }
         // 删除
         function delete_sys(this_object) {
@@ -171,7 +165,8 @@
                         return;
                     }
                     else {
-                        var ip = this_object.parentNode.parentNode.childNodes[1].innerHTML;
+                        var ip = this_object.getAttribute('value');
+                        alert(ip);
                         $.ajax({
                             data: JSON.stringify({'type': 'sys_del', 'ip': ip}),
                             dataType: 'json',
@@ -207,13 +202,14 @@
             // 顺序 id-IP-端口-账户-密码-镜像文件位置-是否是主节点-操作
             for(var i=0; i<form_objs.length; i++) {
                 var tr = document.createElement('tr');
+                var ip_value = form_objs[i][1];
                 for(var j=0; j<form_objs[i].length; j++) {
                     var td = document.createElement('td');
                     if(j === form_objs[i].length - 1) {
-{#                        <td><input type="radio" name="select_master"></td>#}
                         var input = document.createElement('input');
                         input.setAttribute('type', 'radio');
                         input.setAttribute('name', 'select_master');
+                        input.setAttribute('value', ip_value);
                         if(form_objs[i][j]) {
                             input.checked = true;
                         }
@@ -226,7 +222,7 @@
                 }
                 // 操作
                 var op_td = document.createElement('td');
-                op_td.innerHTML = '<span class="lnr lnr-pencil" onclick="edit_sys(this)"></span>&nbsp;&nbsp;&nbsp;<span onclick="delete_sys(this)" class="lnr lnr-trash"></span>';
+                op_td.innerHTML = '<span class="lnr lnr-pencil" onclick="edit_sys(this)" value="' + ip_value + '"' + '></span>&nbsp;&nbsp;&nbsp;<span onclick="delete_sys(this)" class="lnr lnr-trash"' + 'value="' + ip_value + '"></span>';
 {#                op_td.innerHTML = '<li class="glyphicon glyphicon-pencil" id="edit" onclick="edit_user(this)"></li>&nbsp;&nbsp;&nbsp;<li class="glyphicon glyphicon-remove" id="delete" onclick="delete_user(this)"></li>';#}
                 tr.appendChild(op_td);
                 tbody_obj.appendChild(tr);
@@ -258,10 +254,11 @@
                         if(status) {
                             if(resful.sys_add_status === 'success') {
                                 // 制表
+                                toastr.info("节点信息添加成功,相关数据更新需要等待20s左右时间");
                                 make_form(resful.sys_info_list);
                             }
                             else {
-                                toastr.error('请求失败');
+                                toastr.error(resful.sys_add_err_reason);
                             }
                         }
                     }
@@ -269,9 +266,10 @@
                 clean_input();
             }
             else if($("#myModalLabel").text() === '编辑') {
+                var old_ip = edit_obj.getAttribute('value');
                 // 发送ajax请求写入数据库,同步请求
                 $.ajax({
-                    data: JSON.stringify({'type': 'sys_edit', 'ip': ip_obj.value, 'port': port_obj.value,
+                    data: JSON.stringify({'type': 'sys_edit', 'old_ip': old_ip, 'ip': ip_obj.value, 'port': port_obj.value,
                         'password': password_obj.value, 'account': account_obj.value, 'position': position_obj.value}),
                     dataType: 'json',
                     type: 'POST',
@@ -281,10 +279,11 @@
                         if(status) {
                             if(resful.sys_edit_status === 'success') {
                                 // 制表
+                                toastr.info("节点信息编辑成功,相关数据更新需要等待20s左右时间");
                                 make_form(resful.sys_info_list);
                             }
                             else {
-                                toastr.error('请求失败');
+                                toastr.error(resful.sys_edit_err_reason);
                             }
                         }
                     }

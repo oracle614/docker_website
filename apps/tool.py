@@ -2,7 +2,6 @@
 import paramiko
 import os, threading, datetime, logging, time, sys
 import re
-import MySQLdb
 reload(sys)
 sys.setdefaultencoding('utf8')
 sys.path.append('../')
@@ -16,13 +15,6 @@ class ConnectNode(object):
             init connect
         :result nodes format: [[trans object, ssh object, (ip, port, username, password, dir)],....]
         """
-        # self.logger = logging.getLogger(__name__)
-        # self.logger.setLevel(logging.ERROR)
-        # headler = logging.FileHandler('log/error.log')
-        # headler.setLevel(logging.ERROR)
-        # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        # headler.setFormatter(formatter)
-        # self.logger.addHandler(headler)
         self.demo_status = True
         self.cluster_info = {}
         self.nodes_info = []
@@ -30,6 +22,7 @@ class ConnectNode(object):
         # This value is true when the demo is updating the node information.
         # You need to wait for this value to be False to perform other operations
         self.flush_status = False
+        self.nodes = []
         # Is it allowed to update
         # When this value is marked to True, the demo process does not update the node information while the loop waits.
         # When the operation is performed, the value must be set to True and the value is set to False.
@@ -46,25 +39,31 @@ class ConnectNode(object):
     def _get_node_info(self):
         """
             Get the cluster node information from the database and write it to self.nodes_info
-        :return:node_info format: [(ip, port, username, password, dir, master),....]
+        :return:node_info format: [[ip, port, username, password, dir],....]
         """
-        # 注： 此处使用flask_query存在ip无法及时更新的bug
         # Get node info from DB
-        nodes = Node.query.filter().all()
-        # print nodes
-        nodes_info = []
-        for node in nodes:
-            ip = str(node.ip)
-            port = int(node.port)
-            username = str(node.username)
-            password = str(node.password)
-            image_dir = str(node.image_dir)
-            master_ip = Sys.query.filter().first().master_node
-            if ip == master_ip:
-                master = True
-            else:
-                master = False
-            nodes_info.append((ip, port, username, password, image_dir, master))
+        # 此处使用离线线程运行,即本线程的运行与用户是否请求无关,而如果直接在一个 Flask-SQLAlchemy 写成的 Model 上调用
+        # User.query.get(user_id)，就会遇到 RuntimeError。因为此时应用上下文还没被推入栈中，而 Flask-SQLAlchemy
+        # 需要数据库连接信息时就会去取 current_app.config，current_app 指向的却是 _app_ctx_stack为空的栈顶。
+        # 解决的办法是运行脚本正文之前，先将 App 的 App Context 推入栈中，栈顶不为空后 current_app这个 Local Proxy 对象
+        # 就自然能将“取 config 属性” 的动作转发到当前 App 上
+        # 引用app应用上下文
+        with app.app_context():
+            query_nodes = Node.query.filter().all()
+            nodes_info = []
+            for node in query_nodes:
+                ip = str(node.ip)
+                port = int(node.port)
+                username = str(node.username)
+                password = str(node.password)
+                image_dir = str(node.image_dir)
+                # master_ip = Sys.query.filter().first().master_node
+                # if ip == master_ip:
+                #     master = True
+                # else:
+                #     master = False
+                # nodes_info.append((ip, port, username, password, image_dir, master))
+                nodes_info.append([ip, port, username, password, image_dir])
         # set nodes_info
         self.nodes_info = nodes_info
 
@@ -72,7 +71,7 @@ class ConnectNode(object):
         """
             Create paramiko connection using the nodes_info table. If the connection is successful, the first two items are
         both trans objects and SSH objects, otherwise None is convenient for subsequent operation.
-        :return: nodes format: [[trans, ssh, (ip, port, username, password, dir, master)]...]
+        :return: nodes format: [[trans, ssh, [ip, port, username, password, dir, bool_master]]...]
         """
         temp = []
         for node_info in self.nodes_info:
@@ -81,11 +80,76 @@ class ConnectNode(object):
                 trans.connect(username=node_info[2], password=node_info[3])
                 ssh = paramiko.SSHClient()
                 ssh._transport = trans
+                # 创建目录
+                ssh.exec_command('sudo mkdir -p {dir}'.format(dir=node_info[4]))
             except Exception, e:
                 ssh = None
                 trans = None
+            # 将该节点是否可用信息写入数据库
+            with app.app_context():
+                query_node = Node.query.filter(Node.ip == node_info[0]).first()
+                if ssh is None or trans is None:
+                    query_node.available = 'False'
+                else:
+                    query_node.available = 'True'
+                db.session.commit()
             temp.append([trans, ssh, node_info])
         self.nodes = temp
+
+    def _set_master(self):
+        """
+        选取一个可用节点为主节点
+        :return:
+        """
+        master_ip = Sys.query.filter().first()
+        bool_set = False
+        if master_ip is not None:
+            node_ip = Node.query.filter(Node.ip == master_ip.master_node).first()
+            if node_ip is not None:
+                # 主节点已设置且主节点ip有效,但本节点不可用
+                if node_ip.available != 'True':
+                    bool_set = True
+                else:
+                    pass
+            # 主节点已设置但主节点ip无效
+            else:
+                bool_set = True
+        # 主节点未设置
+        else:
+            bool_set = True
+        # 选取一个可用的ip设置为主节点
+        if bool_set:
+            query_ip = Node.query.filter(Node.available == 'True').first()
+            if query_ip is not None:
+                ip = query_ip.ip
+                master_node = Sys.query.filter().first()
+                master_node.master_node = ip
+                db.session.commit()
+            else:
+                query_ip = Node.query.filter().first()
+                if query_ip is not None:
+                    ip = query_ip.ip
+                    master_node = Sys.query.filter().first()
+                    master_node.master_node = ip
+                    db.session.commit()
+
+    def _update_nodes_info(self):
+        """向self.nodes_info中添加主节点信息.
+        修改后self.nodes_info格式如下:
+            [[ip, port, username, password, dir, bool_master],....]
+        由于self.nodes_info与self.nodes[2]位于同块内存地址,故self.nodes更改为如下格式:
+            [[trans, ssh, [ip, port, username, password, dir, bool_master]]...]
+        :return: 无返回值
+        """
+        query_master_ip = Sys.query.filter().first()
+        if query_master_ip is None:
+            return
+        master_ip = query_master_ip.master_node
+        for index in xrange(len(self.nodes_info)):
+            if self.nodes_info[index][0] == master_ip:
+                self.nodes_info[index].append(True)
+            else:
+                self.nodes_info[index].append(False)
 
     def _update_nodes_demo(self):
         """
@@ -93,9 +157,9 @@ class ConnectNode(object):
         running containers, mirrored files, mirrored files, and node status of each node in the
         cluster and write it to the log / cluster_info.json file as json.
         """
-        cmd_all_container = 'docker ps -a |wc -l'
-        cmd_alive_container = 'docker ps|wc -l'
-        cmd_docker_image = 'docker images|wc -l'
+        cmd_all_container = 'docker ps -aq |wc -l'
+        cmd_alive_container = 'docker ps -q |wc -l'
+        cmd_docker_image = 'docker images -q|wc -l'
         while self.demo_status:
             while not self.bool_flush:
                 pass
@@ -104,8 +168,13 @@ class ConnectNode(object):
             self._get_node_info()
             # Update ssh connect.
             self._create_ssh()
+            # Set master_node
+            self._set_master()
+            # Update info
+            self._update_nodes_info()
             self.flush_status = False
             try:
+                # time.sleep(5)
                 cluster_node_num = len(self.nodes)
                 cluster_container_num = 0
                 cluster_alive_container_num = 0
@@ -118,10 +187,12 @@ class ConnectNode(object):
                 cluster_info = {}
                 result_tar_image = []
                 cluster_nodes_info = []
-                # Each node has its own file directory. Unable to perform batch operations.
                 for node in self.nodes:
                     if node[0] is not None and node[1] is not None:
+                        create_tar_image_cmd = 'mkdir -p {dirs}'.format(dirs=node[2][4])
                         cmd_tar_image = 'ls {dirs} |wc -l'.format(dirs=node[2][4])
+                        # 创建目录
+                        # node[1].exec_commands(create_tar_image_cmd)
                         stdin, stdout, stderr = node[1].exec_command(cmd_tar_image)
                         status = 'success'
                     else:
@@ -166,9 +237,8 @@ class ConnectNode(object):
                 cluster_info['cluster_tar_num'] = cluster_tar_num
                 cluster_info['cluster_node_num'] = cluster_node_num
                 cluster_info['cluster_flush_time'] = datetime.datetime.strftime(
-                    datetime.datetime.now(), '%b %d, %Y  %I:%M %p')
+                    datetime.datetime.now(), '%b %d, %Y  %I:%M:%S %p')
                 cluster_info['cluster_nodes_info'] = cluster_nodes_info
-                # print cluster_info
                 self.cluster_info = cluster_info
                 time.sleep(20)
                 self.close()
@@ -222,7 +292,6 @@ class ConnectNode(object):
         while self.flush_status:
             pass
         result = []
-        print self.nodes
         for ip in self.nodes:
             if not master:
                 if ip[2][5]:
@@ -432,7 +501,39 @@ class Tools(object):
         返回用户信息
         :return:
         """
-
+    @staticmethod
+    def set_ip_master(available=False):
+        """
+        设置主节点
+        :param available: True表示不设置不可用节点为主节点,False表示可设置不可用节点为主节点
+        :return:
+        """
+        master_ip = Sys.query.filter().first()
+        bool_set = False
+        if master_ip is not None:
+            node_ip = Node.query.filter(Node.ip == master_ip).first()
+            if node_ip is not None:
+                if available:
+                    # 主节点已设置且主节点ip有效,但本节点不可用
+                    if node_ip.available != 'True':
+                        bool_set = True
+                    else:
+                        pass
+            # 主节点已设置但主节点ip无效
+            else:
+                bool_set = True
+        # 主节点未设置
+        else:
+            bool_set = True
+        # 选取一个可用的ip设置为主节点
+        if bool_set:
+            if available:
+                ip = Node.query.filter(Node.available == 'True').first().ip
+            else:
+                ip = Node.query.filter().first().ip
+            master_node = Sys(master_node=ip)
+            db.session.add(master_node)
+            db.session.commit()
 
     @staticmethod
     def get_connect_node():

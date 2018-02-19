@@ -1,3 +1,4 @@
+# coding=utf-8
 from flask import Flask, session, request
 from flask_sqlalchemy import SQLAlchemy
 import config
@@ -6,6 +7,8 @@ import json
 
 app = Flask(__name__)
 app.config.from_object(config)
+# 将当前应用上下文推入
+app.app_context().push()
 db = SQLAlchemy(app)
 
 
@@ -37,6 +40,7 @@ class Node(db.Model):
     username = db.Column(db.String(20), nullable=False)
     password = db.Column(db.String(20), nullable=False)
     image_dir = db.Column(db.String(50), nullable=False)
+    available = db.Column(db.String(5))
     # image_dir = db.Column(db.String(50), db.ForeignKey('sys_set.image_dir'), nullable=False)
 
 

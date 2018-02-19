@@ -23,7 +23,7 @@
                                     <th>密码</th>
                                     <th>邮箱</th>
                                     <th>创建时间</th>
-                                    <th>角色</th>
+                                    <th>账户类别</th>
                                     <th>简介</th>
                                     <th>操作</th>
                                 </tr>
@@ -41,28 +41,34 @@
                                     <form name="add">
                                         <div class="modal-body">
                                             <div class="form-group">
-                                                <label for="txt_departmentname">用户名</label>
+                                                <label for="txt_username">用户名</label>
                                                 <input type="text" name="txt_username" class="form-control" id="txt_username" placeholder="英文或数字，最多10位">
                                             </div>
                                             <div class="form-group">
-                                                <label for="txt_parentdepartment">密码</label>
+                                                <label for="txt_password">密码</label>
                                                 <input type="text" name="txt_password" class="form-control" id="txt_password" placeholder="最多16位">
                                             </div>
                                             <div class="form-group">
-                                                <label for="txt_departmentlevel">邮箱</label>
-                                                <input type="email" name="txt_avatar" class="form-control" id="txt_email" placeholder="">
+                                                <label for="txt_email">邮箱</label>
+                                                <input type="email" name="txt_email" class="form-control" id="txt_email" placeholder="">
                                             </div>
                                             <div class="form-group">
-                                                <label for="txt_departmentlevel">头像</label>
-                                                <input type="text" name="txt_avatar" class="form-control" id="txt_avatar" placeholder="">
+                                                <label for="txt_avatar">头像URL</label>
+                                                <input type="text" name="txt_avatar" class="form-control" id="txt_avatar" placeholder="默认{{ default_avatar_path }}">
                                             </div>
                                             <div class="form-group">
-                                              <label for="txt_statu">角色</label>
-                                              <input type="text" name="txt_role" class="form-control" id="txt_role" placeholder="ordinary or warden">
+                                              <label for="user_role">帐号类别</label>
+                                                <span id="txt_role">
+                                                    <select id="user_role" class="selectpicker form-control">
+                                                    <!--    <option selected="true" value="ordinary" name="select_role">普通账户</option>
+                                                        <option value="warden" name="select_role">管理员</option>      -->
+                                                    </select>
+                                                </span>
+{#                                              <input type="text" name="txt_role" class="form-control" id="txt_role" placeholder="默认ordinary">#}
                                             </div>
                                             <div class="form-group">
-                                              <label for="txt_statu">简介</label>
-                                              <input type="text" name="txt_info" class="form-control" id="txt_info" placeholder="50字以内描述">
+                                              <label for="txt_info">简介</label>
+                                              <input type="text" name="txt_info" class="form-control" id="txt_info" placeholder="10字以内描述">
                                             </div>
                                         </div>
                                         <div class="modal-footer">
@@ -131,7 +137,7 @@
                         return;
                     }
                     else {
-                        var username = this_object.parentNode.parentNode.childNodes[1].innerHTML;
+                        var username = this_object.getAttribute('value');
                         $.ajax({
                             data: JSON.stringify({'type': 'user_del', 'username': username}),
                             dataType: 'json',
@@ -161,7 +167,7 @@
 
         function edit_user(this_object) {
             edit_obj = this_object;
-            var username = this_object.parentNode.parentNode.childNodes[1].innerText;
+            var username = this_object.getAttribute('value');
             // 通过ajax指定值
             $.ajax({
                 data: JSON.stringify({'type': 'get_user_info', 'username': username}),
@@ -175,11 +181,10 @@
                             $("#txt_username").val(resful.get_user_info.username);
                             $("#txt_username").attr("disabled","disabled");
                             $("#txt_password").val(resful.get_user_info.password);
-                            $("#txt_role").val(resful.get_user_info.role);
-                            $("#txt_role").attr("disabled","disabled");
                             $("#txt_info").val(resful.get_user_info.info);
                             $("#txt_email").val(resful.get_user_info.email);
                             $("#txt_avatar").val(resful.get_user_info.avatar);
+                            set_role(resful.get_user_info.role, true);
                         }
                     }
                 }
@@ -200,6 +205,8 @@
         $("#add").click(function () {
             $("#myModalLabel").text("新增");
             $('#myModal').modal();
+            set_role('ordinary', false);
+            clean_input();
             document.getElementById('txt_username').focus();
         });
 
@@ -213,9 +220,9 @@
             var username_obj = document.getElementById('txt_username');
             var password_obj = document.getElementById('txt_password');
             var avatar_obj = document.getElementById('txt_avatar');
-            var role_obj = document.getElementById('txt_role');
             var info_obj = document.getElementById('txt_info');
             var email_obj = document.getElementById('txt_email');
+            var role = get_role();
             // 校验输入
             if(! check_input())
                 return;
@@ -223,7 +230,7 @@
                 // 发送ajax请求写入数据库,同步请求
                 $.ajax({
                     data: JSON.stringify({'type': 'user_add', 'username': username_obj.value, 'password': password_obj.value,
-                        'role': role_obj.value, 'avatar': avatar_obj.value, 'info': info_obj.value, 'email': email_obj.value}),
+                        'role': role, 'avatar': avatar_obj.value, 'info': info_obj.value, 'email': email_obj.value}),
                     dataType: 'json',
                     type: 'POST',
                     contentType: 'application/json; charset=UTF-8',
@@ -235,42 +242,18 @@
                                 make_form(resful.user_info_list);
                             }
                             else {
-                                toastr.error('请求失败');
+                                toastr.error(resful.user_edit_err_reason);
                             }
                         }
                     }
                 });
-                /*
-                var username_td = document.createElement('td');
-                username_td.innerText = username_obj.value;
-                var password_td = document.createElement('td');
-                password_td.innerText = password_obj.value;
-                var time_td = document.createElement('td');
-                time_td.innerText = "2017-05-06 14:12:32";
-                var role_td = document.createElement('td');
-                role_td.innerText = role_obj.value;
-                var info_td = document.createElement('td');
-                info_td.innerText = info_obj.value;
-                var index_td = document.createElement('td');
-                index_td.innerText = parseInt(tbody.lastElementChild.firstElementChild.innerText) + 1;
-                var button_td = document.createElement('td');
-                button_td.innerHTML = '<li class="glyphicon glyphicon-pencil" id="edit" onclick="edit_user(this)"></li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<li class="glyphicon glyphicon-remove" onclick="delete_user(this)"></li>';
-                tr.appendChild(index_td);
-                tr.appendChild(username_td);
-                tr.appendChild(password_td);
-                tr.appendChild(time_td);
-                tr.appendChild(role_td);
-                tr.appendChild(info_td);
-                tr.appendChild(button_td);
-                tbody.appendChild(tr);
-                */
                 clean_input();
             }
             else if($("#myModalLabel").text() === '编辑') {
                 // 发送ajax请求写入数据库,同步请求
                 $.ajax({
                     data: JSON.stringify({'type': 'user_edit', 'username': username_obj.value, 'password': password_obj.value,
-                        'role': role_obj.value, 'avatar': avatar_obj.value, 'info': info_obj.value, 'email': email_obj.value}),
+                        'role': role, 'avatar': avatar_obj.value, 'info': info_obj.value, 'email': email_obj.value}),
                     dataType: 'json',
                     type: 'POST',
                     contentType: 'application/json; charset=UTF-8',
@@ -287,7 +270,7 @@
                                     make_form(resful.user_info_list);
                             }
                             else {
-                                toastr.error('请求失败');
+                                toastr.error(resful.user_edit_err_reason);
                             }
                         }
                     }
@@ -305,17 +288,70 @@
             // 顺序 id-用户名-密码-邮箱-创建日期-角色-简介-操作
             for(var i=0; i<form_objs.length; i++) {
                 var tr = document.createElement('tr');
+                var username = form_objs[i][1];
                 for(var j=0; j<form_objs[i].length; j++) {
                     var td = document.createElement('td');
+                    if(j === form_objs[i].length - 2) {
+                        if(form_objs[i][j] === 'ordinary')
+                            td.innerText = '普通账户';
+                        else
+                            td.innerText = '管理员';
+                        tr.appendChild(td);
+                        continue;
+                    }
                     td.innerText = form_objs[i][j];
                     tr.appendChild(td);
                 }
                 var op_td = document.createElement('td');
-                op_td.innerHTML = '<span class="lnr lnr-pencil" onclick="edit_user(this)"></span>&nbsp;&nbsp;&nbsp;<span onclick="delete_user(this)" class="lnr lnr-trash"></span>';
-{#                op_td.innerHTML = '<li class="glyphicon glyphicon-pencil" id="edit" onclick="edit_user(this)"></li>&nbsp;&nbsp;&nbsp;<li class="glyphicon glyphicon-remove" id="delete" onclick="delete_user(this)"></li>';#}
+                // op_td.innerHTML = '<span class="lnr lnr-pencil" onclick="edit_user(this)"></span>&nbsp;&nbsp;&nbsp;<span onclick="delete_user(this)" class="lnr lnr-trash"></span>';
+                op_td.innerHTML = '<span class="lnr lnr-pencil" onclick="edit_user(this)" value="' + username + '"' + '></span>&nbsp;&nbsp;&nbsp;<span onclick="delete_user(this)" class="lnr lnr-trash"' + 'value=" ' + username + '"></span>'
                 tr.appendChild(op_td);
                 tbody_obj.appendChild(tr);
             }
+        }
+
+        // 设置账户类型下拉菜单
+        /*
+        * select_type: 选中类型.ordinary表示选中普通账户下拉框;warden表示选中管理员下拉框
+        * disable: bool类型.false表示解除禁止操作参数,true表示添加禁止操作参数
+        * */
+        function set_role(select_type, disable) {
+            var user_role = document.getElementById('user_role');
+            user_role.innerHTML = '';
+            var option_ordinary = document.createElement('option');
+            var option_warden = document.createElement('option');
+            option_ordinary.value = 'ordinary';
+            option_warden.value = 'warden';
+            option_warden.innerText = '管理员';
+            option_ordinary.innerText = '普通账户';
+            option_ordinary.setAttribute('name', 'select_role');
+            option_warden.setAttribute('name', 'select_role');
+            if(select_type === 'ordinary') {
+                option_ordinary.setAttribute('selected', 'true');
+            }
+            else {
+                option_warden.setAttribute('selected',  'true');
+            }
+            if(disable) {
+                user_role.setAttribute('disabled', 'disabled');
+            }
+            else
+                user_role.removeAttribute('disabled');
+            user_role.appendChild(option_ordinary);
+            user_role.appendChild(option_warden);
+            $("#user_role").selectpicker("refresh");
+        }
+
+        // 获取账户类型菜单值
+        function get_role() {
+            var roles = document.getElementsByName('select_role');
+            var role = '';
+            for(var i=0; i<roles.length; i++) {
+                if(roles[i].selected) {
+                    role = roles[i].value;
+                }
+            }
+            return role;
         }
 
         // 清除输入框
@@ -323,10 +359,11 @@
             document.getElementById('txt_username').value = '';
             document.getElementById('txt_password').value = '';
             document.getElementById('txt_avatar').value = '';
-            document.getElementById('txt_role').value = '';
+            // document.getElementById('txt_role').value = '';
             document.getElementById('txt_info').value = '';
             document.getElementById('txt_email').value = '';
         }
+
         // 校验输入
         function check_input() {
             var username_obj = document.getElementById('txt_username');
@@ -335,7 +372,6 @@
             var role_obj = document.getElementById('txt_role');
             var info_obj = document.getElementById('txt_info');
             var email_obj = document.getElementById('txt_email');
-            var tr = document.createElement('tr');
             // 校验输入
             if(username_obj.value.length === 0 || username_obj.value.length > 10) {
                 toastr.error('用户名非法');
@@ -348,19 +384,22 @@
                 password_obj.value = '';
                 password_obj.focus();
                 return false;
-            }
+            }/*
             if(role_obj.value.length === 0) {
                 toastr.error('角色非法,不允许为空');
                 role_obj.value = '';
                 role_obj.focus();
                 return false;
             }
+            */
+            /*
             if(role_obj.value !== 'warden' && role_obj.value !== 'ordinary') {
                 toastr.error('角色非法,只允许为`warden`或`ordinary`');
                 role_obj.value = '';
                 role_obj.focus();
                 return false;
             }
+            */
             if(info_obj.value.length > 50) {
                 toastr.error();
                 info_obj.value = '';
