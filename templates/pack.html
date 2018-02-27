@@ -197,7 +197,7 @@
             get_selected_node();
             // 发送打包请求
             $.ajax({
-                data: JSON.stringify({'type': 'submit_pack_port', 'select_node': select_node, 'images_name': images_name}),
+                data: JSON.stringify({'type': 'submit_pack_port', 'node': select_node, 'images_name': images_name}),
                 dataType: 'json',
                 type: 'POST',
                 contentType: 'application/json; charset=UTF-8',
@@ -236,7 +236,7 @@
             get_selected_node();
             // 发送打包请求
             $.ajax({
-                data: JSON.stringify({'type': 'submit_pack_local', 'node': select_node, 'files_name': images_name}),
+                data: JSON.stringify({'type': 'submit_pack_local', 'node': select_node, 'images_name': images_name}),
                 dataType: 'json',
                 type: 'POST',
                 contentType: 'application/json; charset=UTF-8',

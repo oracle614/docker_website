@@ -22,7 +22,7 @@ UPLOAD_FOLDER = os.path.dirname(os.path.abspath('__file__')) + '/' + 'upload'
 DOWNLOAD_FOLDER = os.path.dirname(os.path.abspath('__file__')) + '/' + 'download'
 TEMP_FOLDER = os.path.dirname(os.path.abspath('__file__')) + '/' + 'temp'
 HOME_FOLDER = os.path.dirname(os.path.abspath('__file__'))
-NODE_TMP_FOLDER = '/tmp/'
+NODE_TMP_FOLDER = '/tmp'
 NODE_TMP_IMAGE_FOLDER = '/tmp/dockerImage'
 
 MESSAGE_NUMBER = 5

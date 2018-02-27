@@ -24,6 +24,7 @@
                                     <th>账户</th>
                                     <th>密码</th>
                                     <th>镜像位置</th>
+                                    <th>状态</th>
                                     <th>Master</th>
                                     <th>操作</th>
                                 </tr>
@@ -199,7 +200,7 @@
             var tbody_obj = document.getElementById('tbody');
             // 清空原始内容
             tbody_obj.innerHTML = '';
-            // 顺序 id-IP-端口-账户-密码-镜像文件位置-是否是主节点-操作
+            // 顺序 id-IP-端口-账户-密码-镜像文件位置-节点状态-是否是主节点-操作
             for(var i=0; i<form_objs.length; i++) {
                 var tr = document.createElement('tr');
                 var ip_value = form_objs[i][1];
@@ -210,12 +211,29 @@
                         input.setAttribute('type', 'radio');
                         input.setAttribute('name', 'select_master');
                         input.setAttribute('value', ip_value);
+                        input.setAttribute('onclick', 'set_master(this)');
                         if(form_objs[i][j]) {
                             input.checked = true;
                         }
                         td.appendChild(input);
                         tr.appendChild(td);
                         continue;
+                    }
+                    // 状态栏
+                    if(j === form_objs[i].length - 2) {
+                       var status_span = document.createElement('span');
+                       if(form_objs[i][j] === 'False') {
+
+                           status_span.setAttribute('class', 'label label-danger');
+                           status_span.innerText = '异常';
+                       }
+                       else if(form_objs[i][j] === 'True') {
+                           status_span.setAttribute('class', 'label label-success');
+                           status_span.innerText = '正常';
+                       }
+                       td.appendChild(status_span);
+                       tr.appendChild(td);
+                       continue;
                     }
                     td.innerText = form_objs[i][j];
                     tr.appendChild(td);
@@ -292,6 +310,31 @@
             }
             $('#myModal').modal('hide');
         });
+        // 主节点选择框点击事件
+        // obj: 单选按钮本身
+        function set_master(obj) {
+            var obj_value = obj.value;
+            $.ajax({
+                data: JSON.stringify({'type': 'sys_set_master', 'ip': obj_value}),
+                dataType: 'json',
+                type: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                url: '{{ url_for('get_sys_info') }}',
+                success: function (resful, status) {
+                    if(status) {
+                        if(resful.sys_set_master_status === 'success') {
+                            toastr.info('成功设置' + obj_value + '为主节点');
+                            // 为追求统一,此处采用重构前端表格方式删除
+                            make_form(resful.sys_info_list);
+                        }
+                        else if (resful.sys_set_master_status === 'error'){
+                            toastr.error(resful.sys_set_master_err_reason);
+                            make_form(resful.sys_info_list);
+                        }
+                    }
+                }
+            });
+        }
         
         // 清除输入框
         function clean_input() {

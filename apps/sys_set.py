@@ -40,6 +40,7 @@ def get_sys_info():
         if received.get('type') == 'sys_info':
             result['sys_info_status'] = 'success'
             result['sys_info_list'] = Tools.get_sys_info_list()
+        # 添加帐号信息
         elif received.get('type') == 'sys_add':
             ip = received.get('ip')
             port = received.get('port')
@@ -74,6 +75,7 @@ def get_sys_info():
             else:
                 result['sys_add_status'] = 'danger'
                 result['sys_add_err_reason'] = '添加失败,请检查数据格式或当前账户权限'
+        # 编辑帐号信息
         elif received.get('type') == 'sys_edit':
             ip = received.get('ip')
             port = received.get('port')
@@ -113,6 +115,7 @@ def get_sys_info():
             else:
                 result['sys_edit_status'] = 'danger'
                 result['sys_edit_err_reason'] = '修改失败,请检查数据格式或当前账户权限'
+        # 获取单个IP节点信息
         elif received.get('type') == 'get_sys_info':
             ip = received.get('ip')
             if ip is not None:
@@ -128,6 +131,7 @@ def get_sys_info():
             else:
                 result['get_sys_status'] = 'error'
                 result['get_sys_err_reason'] = '请求数据不合法'
+        # 删除指定IP账户信息
         elif received.get('type') == 'sys_del':
             ip = received.get('ip')
             if ip is not None:
@@ -153,6 +157,49 @@ def get_sys_info():
             else:
                 result['sys_del_status'] = 'error'
                 result['sys_del_err_reason'] = '账户不存在'
+        elif received.get('type') == 'sys_set_master':
+            ip = received.get('ip')
+            master_ip = Sys.query.filter().first()
+            # 数据库中无主节点信息
+            if master_ip is None:
+                node_ip = Node.query.filter(ip == Node.ip).first()
+                if node_ip is None:
+                    result['sys_set_master_status'] = 'error'
+                    result['sys_set_master_err_reason'] = '请求IP无效'
+                    result['sys_info_list'] = Tools.get_sys_info_list()
+                else:
+                    if node_ip.available == 'True':
+                        master_node = Sys(master_node=ip)
+                        db.session.add(master_node)
+                        db.session.commit()
+                        result['sys_set_master_status'] = 'success'
+                        result['sys_info_list'] = Tools.get_sys_info_list()
+                    # 节点不可用
+                    else:
+                        result['sys_set_master_status'] = 'error'
+                        result['sys_set_master_err_reason'] = '设置失败：该节点不可用'
+                        result['sys_info_list'] = Tools.get_sys_info_list()
+            # 数据库中存在主节点信息
+            else:
+                # 请求IP同数据库中IP相同,返回ignore
+                if ip == master_ip.master_node:
+                    result['sys_set_master_status'] = 'ignore'
+                else:
+                    node_ip = Node.query.filter(ip == Node.ip).first()
+                    if node_ip is None:
+                        result['sys_set_master_status'] = 'error'
+                        result['sys_set_master_err_reason'] = '请求IP无效'
+                        result['sys_info_list'] = Tools.get_sys_info_list()
+                    else:
+                        if node_ip.available == 'True':
+                            master_ip.master_node = ip
+                            db.session.commit()
+                            result['sys_set_master_status'] = 'success'
+                            result['sys_info_list'] = Tools.get_sys_info_list()
+                        else:
+                            result['sys_set_master_status'] = 'error'
+                            result['sys_set_master_err_reason'] = '设置失败：该节点不可用'
+                            result['sys_info_list'] = Tools.get_sys_info_list()
     return json.dumps(result)
 
 

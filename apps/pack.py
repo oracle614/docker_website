@@ -57,7 +57,7 @@ def get_pack_info():
     receive = request.get_json()
     receive_type = receive.get('type')
     select_node_ip = receive.get('node')
-    images_name = receive.get('files_name')
+    images_name = receive.get('images_name')
     info = {}
     if 'username' in session:
         # 响应节点按钮
@@ -148,7 +148,7 @@ def pack_local(ip, images_name, username):
     mk_cmd = 'mkdir -p {node_tmp_image_folder}'.format(node_tmp_image_folder=NODE_TMP_IMAGE_FOLDER)
     save_cmd = 'docker save {image_name} > {node_tmp_image_folder}/{image_name}.tar'
     # tar打包不包含路径使用格式 tar -cf `打包文件生成的路径` -C `源文件所在的目录` 源文件所在的路径
-    tag_cmd = 'tar -cf {node_tmp_folder}/Pack.tar -C {node_tmp_image_folder} {node_tmp_image_folder}.'
+    tag_cmd = 'tar -cf {node_tmp_folder}/Pack.tar -C {node_tmp_image_folder} {node_tmp_image_folder}'
     send_cmd = 'scp -r {username}@{node_ip}:{node_tmp_folder}/Pack.tar {local_path}'
     rm_cmd = 'rm -rf {node_tmp_image_folder} {node_tmp_folder}/Pack.tar'
     # 创建临时文件夹
@@ -166,10 +166,10 @@ def pack_local(ip, images_name, username):
     # 将文件发送到服务器所在节点
     exec_send_cmd = send_cmd.format(username=node_username, node_ip=ip, node_tmp_folder=NODE_TMP_FOLDER, local_path=TEMP_FOLDER)
     commands.getstatusoutput(exec_send_cmd)
-    connect_node.bool_flush = True
     # 删除临时文件
     exec_rm_cmd = rm_cmd.format(node_tmp_image_folder=NODE_TMP_IMAGE_FOLDER, node_tmp_folder=NODE_TMP_FOLDER)
     connect_node.cmd(ip, exec_rm_cmd)
+    connect_node.bool_flush = True
     # 统计执行结果
     success_num = len([x for x in exec_status if x == 'success'])
     fail_num = len(exec_status) - success_num

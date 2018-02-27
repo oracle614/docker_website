@@ -97,12 +97,14 @@ class ConnectNode(object):
         self.nodes = temp
 
     def _set_master(self):
-        """
-        选取一个可用节点为主节点
-        :return:
+        """选取一个可用节点为主节点
+        :return: 无返回值
         """
         master_ip = Sys.query.filter().first()
+        # 标记是否需要更改
         bool_set = False
+        # 标记主节点数据库是否为空
+        bool_empty = False
         if master_ip is not None:
             node_ip = Node.query.filter(Node.ip == master_ip.master_node).first()
             if node_ip is not None:
@@ -117,21 +119,30 @@ class ConnectNode(object):
         # 主节点未设置
         else:
             bool_set = True
-        # 选取一个可用的ip设置为主节点
+            bool_empty = True
         if bool_set:
+            # 选取第一个可用节点
             query_ip = Node.query.filter(Node.available == 'True').first()
             if query_ip is not None:
                 ip = query_ip.ip
-                master_node = Sys.query.filter().first()
-                master_node.master_node = ip
-                db.session.commit()
-            else:
-                query_ip = Node.query.filter().first()
-                if query_ip is not None:
-                    ip = query_ip.ip
+                if not bool_empty:
                     master_node = Sys.query.filter().first()
                     master_node.master_node = ip
-                    db.session.commit()
+                else:
+                    master_node = Sys(master_node=ip)
+                    db.session.add(master_node)
+                db.session.commit()
+            # 若无可用节点,选取所有节点中的第一个节点为主节点
+            # else:
+            #     query_ip = Node.query.filter().first()
+            #     ip = query_ip.ip
+            #     if not bool_empty:
+            #         master_node = Sys.query.filter().first()
+            #         master_node.master_node = ip
+            #     else:
+            #         master_node = Sys(master_node=ip)
+            #         db.session.add(master_node)
+            #     db.session.commit()
 
     def _update_nodes_info(self):
         """向self.nodes_info中添加主节点信息.
@@ -660,17 +671,21 @@ class Tools(object):
     @staticmethod
     def get_sys_info_list():
         """返回本集群系统信息
-        # 顺序 id-ip-端口-账户-密码-镜像文件位置-是否是主节点
+        # 顺序 id-ip-端口-账户-密码-镜像文件位置-节点状态-是否是主节点
         :return:
         """
         sys_infos = Node.query.filter().all()
+        master_node = Sys.query.filter().first()
         info = []
         ids = 0
         for sys_info in sys_infos:
             ids += 1
-            bool_master = Tools.get_connect_node().get_ip_attr(sys_info.ip, 'master')
+            if master_node is not None:
+                bool_master = master_node.master_node == sys_info.ip
+            else:
+                bool_master = False
             info.append([ids, sys_info.ip, int(sys_info.port), sys_info.username,
-                         sys_info.password, sys_info.image_dir, bool_master])
+                         sys_info.password, sys_info.image_dir, sys_info.available, bool_master])
         return info
 
     @staticmethod
