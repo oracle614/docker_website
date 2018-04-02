@@ -220,8 +220,8 @@
                 return;
             }
             //检测是否存在使用中的镜像,有则弹框确认
-            if(UsingLength !==0) {
-                window.Ewin.confirm({message: '部分镜像使用中,确定删除么?', title: '删除确认'}).on(function (e) {
+            if(UsingLength !==0 || images_name.length !==0) {
+                window.Ewin.confirm({message: '确定删除么?', title: '删除确认'}).on(function (e) {
                     if(!e) {
                         return;
                     }
